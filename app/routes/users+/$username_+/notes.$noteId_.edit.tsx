@@ -1,5 +1,10 @@
 import { json, type DataFunctionArgs, redirect } from '@remix-run/node'
-import { Form, useLoaderData } from '@remix-run/react'
+import {
+	Form,
+	useFormAction,
+	useLoaderData,
+	useNavigation,
+} from '@remix-run/react'
 import { db } from '#app/utils/db.server'
 import { invariantResponse } from '#app/utils/misc'
 import { Label } from '@radix-ui/react-label'
@@ -7,6 +12,7 @@ import { Input } from '#app/components/ui/input'
 import { Button } from '#app/components/ui/button'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar'
 import { Textarea } from '#app/components/ui/textarea'
+import { StatusButton } from '#app/components/ui/status-button'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = db.note.findFirst({
@@ -43,6 +49,14 @@ export async function action({ request, params }: DataFunctionArgs) {
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 
+	// 🐨 determine whether this form is submitting
+	const navigation = useNavigation()
+	const formAction = useFormAction()
+	const isSubmitting =
+		navigation.state !== 'idle' &&
+		navigation.formMethod === 'POST' &&
+		navigation.formAction === formAction
+
 	return (
 		<Form
 			method="POST"
@@ -64,7 +78,13 @@ export default function NoteEdit() {
 				<Button variant="destructive" type="reset">
 					Reset
 				</Button>
-				<Button type="submit">Submit</Button>
+				<StatusButton
+					type="submit"
+					disabled={isSubmitting}
+					status={isSubmitting ? 'pending' : 'idle'}
+				>
+					Submit
+				</StatusButton>
 			</div>
 		</Form>
 	)
