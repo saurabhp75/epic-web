@@ -1,7 +1,9 @@
 import { cn } from '#app/utils/misc'
-import { Link, NavLink, Outlet } from '@remix-run/react'
+import { Link, NavLink, Outlet, useParams } from '@remix-run/react'
 
 export default function NotesRoute() {
+	const params = useParams()
+
 	return (
 		<div className="flex h-full justify-between pb-12 border-8 border-blue-500">
 			<div>
@@ -9,7 +11,7 @@ export default function NotesRoute() {
 				<ul>
 					<li>
 						<Link to=".." className="underline" relative="path">
-							Back to Kody
+							{`Back to ${params.username}`}
 						</Link>
 					</li>
 					<li>
