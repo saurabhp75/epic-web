@@ -14,6 +14,7 @@ import {
 import faviconAssetUrl from './assets/favicon.svg'
 import fontStylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
+import { getEnv } from './utils/env.server'
 
 // Commented out as it was just to demo Remix Bundling
 // import './styles/global.css'
@@ -42,7 +43,7 @@ export async function loader() {
 	// 	headers: { 'content-type': 'application/json' },
 	// })
 
-	return json({ username: os.userInfo().username })
+	return json({ username: os.userInfo().username, ENV: getEnv() })
 }
 
 export default function App() {
@@ -79,6 +80,15 @@ export default function App() {
 				</div>
 				<div className="h-5" />
 				<ScrollRestoration />
+				{/*
+					🐨 add an inline script here using dangerouslySetInnerHTML which
+					sets window.ENV to the JSON.stringified value of data.ENV
+				*/}
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `window.ENV = ${JSON.stringify(data.ENV)}`,
+					}}
+				/>
 				<Scripts />
 				<LiveReload />
 			</body>
