@@ -1,9 +1,11 @@
+import { cssBundleHref } from '@remix-run/css-bundle'
 import { type LinksFunction } from '@remix-run/node'
 import { Links, LiveReload, Scripts } from '@remix-run/react'
 
 import faviconAssetUrl from './assets/favicon.svg'
 import fontStylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
+import './styles/global.css'
 
 // By default Remix takes the "favicon.ico" from "/public'
 // folder, we can change this usings the links export
@@ -17,7 +19,8 @@ export const links: LinksFunction = () => {
 		},
 		{ rel: 'stylesheet', href: fontStylesheetUrl },
 		{ rel: 'stylesheet', href: tailwindStylesheetUrl },
-	]
+		cssBundleHref ? { rel: 'stylesheet', href: cssBundleHref } : null,
+	].filter(Boolean)
 }
 
 export default function App() {
