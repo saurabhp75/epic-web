@@ -1,6 +1,7 @@
 import { Link, useLoaderData } from '@remix-run/react'
 import { db } from '#app/utils/db.server'
 import { json, type DataFunctionArgs } from '@remix-run/node'
+import { invariantResponse } from '#app/utils/misc'
 
 
 export async function loader({ params }: DataFunctionArgs) {
@@ -12,8 +13,14 @@ export async function loader({ params }: DataFunctionArgs) {
 		},
 	})
 
+	// Replaced by invariantResponse() utility
+	// if (!user) {
+	// 	throw new Response('user not found', { status: 404 })
+	// }
+
+	invariantResponse(user, 'user not found', { status: 404 })
+
 	return json({
-		// @ts-expect-error
 		user: { name: user.name, username: user.username },
 	})
 }

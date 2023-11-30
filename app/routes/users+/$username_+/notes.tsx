@@ -1,4 +1,5 @@
 import { db } from '#app/utils/db.server'
+import { invariantResponse } from '#app/utils/misc'
 import { json, type DataFunctionArgs } from '@remix-run/node'
 import { Link, NavLink, Outlet, useLoaderData } from '@remix-run/react'
 
@@ -10,7 +11,9 @@ export async function loader({ params }: DataFunctionArgs) {
 			},
 		},
 	})
-	
+
+	invariantResponse(owner, 'owner not found', { status: 404 })
+
 	const notes = db.note
 		.findMany({
 			where: {
@@ -27,7 +30,6 @@ export async function loader({ params }: DataFunctionArgs) {
 
 export default function NotesRoute() {
 	const data = useLoaderData<typeof loader>()
-	// @ts-expect-error
 	const ownerDisplayName = data.owner.name ?? data.owner.username
 
 	const navLinkDefaultClassName =

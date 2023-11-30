@@ -1,4 +1,5 @@
 import { db } from '#app/utils/db.server'
+import { invariantResponse } from '#app/utils/misc'
 import { json, type DataFunctionArgs } from '@remix-run/node'
 import { useLoaderData } from '@remix-run/react'
 
@@ -11,9 +12,9 @@ export async function loader({ params }: DataFunctionArgs) {
 		},
 	})
 
+	invariantResponse(note, 'note not found', { status: 404 })
 
 	return json({
-		// @ts-expect-error
 		note: { title: note.title, content: note.content },
 	})
 }
