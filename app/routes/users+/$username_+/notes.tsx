@@ -1,5 +1,5 @@
 import { db } from '#app/utils/db.server'
-import { invariantResponse } from '#app/utils/misc'
+import { cn, invariantResponse } from '#app/utils/misc'
 import { json, type DataFunctionArgs } from '@remix-run/node'
 import { Link, NavLink, Outlet, useLoaderData } from '@remix-run/react'
 
