@@ -1,6 +1,8 @@
 import { type LinksFunction } from '@remix-run/node'
 import { Links, LiveReload, Scripts } from '@remix-run/react'
 
+import faviconAssetUrl from './assets/favicon.svg'
+
 // By default Remix takes the "favicon.ico" from "/public'
 // folder, we can change this usings the links export
 
@@ -8,7 +10,7 @@ export const links: LinksFunction = () => {
 	return [
 		{
 			type: 'image/svg+xml',
-			href: 'favicon.svg',
+			href: faviconAssetUrl,
 			rel: 'icon',
 		},
 	]
