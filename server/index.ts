@@ -1,13 +1,13 @@
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { createRequestHandler } from '@remix-run/express'
-import { broadcastDevReady, type ServerBuild } from '@remix-run/node'
+import crypto from 'crypto'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { type RequestHandler, createRequestHandler } from '@remix-run/express'
+import { type ServerBuild, broadcastDevReady } from '@remix-run/node'
 import { ip as ipAddress } from 'address'
 import chalk from 'chalk'
 import closeWithGrace from 'close-with-grace'
 import compression from 'compression'
 import express from 'express'
-import rateLimit from 'express-rate-limit'
 import getPort, { portNumbers } from 'get-port'
 import morgan from 'morgan'
 
@@ -71,47 +71,23 @@ app.use(express.static('public', { maxAge: '1h' }))
 morgan.token('url', req => decodeURIComponent(req.url ?? ''))
 app.use(morgan('tiny'))
 
-const limitMultiple = process.env.TESTING ? 10_000 : 1
-
-const rateLimitDefault = {
-	windowMs: 60 * 1000,
-	limit: 1000 * limitMultiple,
-	standardHeaders: true,
-	legacyHeaders: false,
-}
-
-const strongestRateLimit = rateLimit({
-	...rateLimitDefault,
-	limit: 2,
-	// limit: 10 * limitMultiple,
-}) //with 10 per minute. Applies to non-GET requests to /signup
-const strongRateLimit = rateLimit({
-	...rateLimitDefault,
-	limit: 100 * limitMultiple,
-}) //with 100 per minute. Applies to other non-GET requests
-const generalRateLimit = rateLimit({
-	...rateLimitDefault,
-	limit: 100 * limitMultiple,
-}) //with 1000 per minute. Applies to everything else.
-
-app.use((req, res, next) => {
-	const strongPaths = ['/signup']
-
-	if (req.method !== 'GET' || req.method !== 'HEAD') {
-		if (strongPaths.some(path => req.path.includes(path))) {
-			return strongestRateLimit(req, res, next)
-		}
-		return strongRateLimit(req, res, next)
-	}
-	return generalRateLimit(req, res, next)
+app.use((_, res, next) => {
+	res.locals.cspNonce = crypto.randomBytes(16).toString('hex')
+	next()
 })
+
+function getRequestHandler(build: ServerBuild): RequestHandler {
+	function getLoadContext(_: unknown, res: any) {
+		return { cspNonce: res.locals.cspNonce }
+	}
+	return createRequestHandler({ build, mode: MODE, getLoadContext })
+}
 
 app.all(
 	'*',
 	process.env.NODE_ENV === 'development'
-		? (...args) =>
-				createRequestHandler({ build: devBuild, mode: MODE })(...args)
-		: createRequestHandler({ build, mode: MODE }),
+		? (...args) => getRequestHandler(devBuild)(...args)
+		: getRequestHandler(build),
 )
 
 const desiredPort = Number(process.env.PORT || 3000)
