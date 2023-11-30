@@ -34,6 +34,13 @@ export const links: LinksFunction = () => {
 }
 
 export async function loader() {
+	// The two return below are exactly same, json() is a
+	// handy utility for sending responses
+	// return json({ hello: 'world' })
+	// return new Response(JSON.stringify({ hello: 'world' }), {
+	// 	headers: { 'content-type': 'application/json' },
+	// })
+
 	return json({ username: os.userInfo().username })
 }
 
@@ -51,6 +58,9 @@ export default function App() {
 						<Link to="/">
 							<div className="font-light">epic</div>
 							<div className="font-bold">notes</div>
+						</Link>
+						<Link className="underline" to="users/kody/notes/d27a197e">
+							Kody's Notes
 						</Link>
 					</nav>
 				</header>
