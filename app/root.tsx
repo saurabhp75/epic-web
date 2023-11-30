@@ -5,6 +5,7 @@ import {
 	Link,
 	Links,
 	LiveReload,
+	Meta,
 	Outlet,
 	Scripts,
 	ScrollRestoration,
@@ -35,6 +36,13 @@ export const links: LinksFunction = () => {
 	].filter(Boolean) // Keep TS happy
 }
 
+export const meta: MetaFunction = () => {
+	return [
+		{ title: 'Epic Notes' },
+		{ name: 'description', content: `Your own captain's log` },
+	]
+}
+
 export async function loader() {
 	// The two return below are exactly same, json() is a
 	// handy utility for sending responses
@@ -52,8 +60,7 @@ export default function App() {
 	return (
 		<html lang="en" className="h-full overflow-x-hidden">
 			<head>
-				<title>Epic Notes</title>
-				<meta name="description" content="Your own captain's log" />
+				<Meta />
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width,initial-scale=1" />
 				<Links />

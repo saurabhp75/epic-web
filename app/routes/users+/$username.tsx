@@ -1,6 +1,6 @@
 import { Link, useLoaderData } from '@remix-run/react'
 import { db } from '#app/utils/db.server'
-import { json, type DataFunctionArgs } from '@remix-run/node'
+import { json, type DataFunctionArgs, type MetaFunction } from '@remix-run/node'
 import { invariantResponse } from '#app/utils/misc'
 
 export async function loader({ params }: DataFunctionArgs) {
@@ -35,4 +35,11 @@ export default function UserProfileRoute() {
 			</Link>
 		</div>
 	)
+}
+
+export const meta: MetaFunction = () => {
+	return [
+		{ title: 'Profile | Epic Notes' },
+		{ name: 'description', content: 'Checkout this Profile on Epic Notes' },
+	]
 }
