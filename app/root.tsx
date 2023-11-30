@@ -1,6 +1,6 @@
 import os from 'node:os'
 import { cssBundleHref } from '@remix-run/css-bundle'
-import { json, type LinksFunction } from '@remix-run/node'
+import { json, type MetaFunction, type LinksFunction } from '@remix-run/node'
 import {
 	Link,
 	Links,
