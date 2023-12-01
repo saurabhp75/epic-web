@@ -9,7 +9,7 @@ import { floatingToolbarClassName } from '#app/components/floating-toolbar'
 import { Textarea } from '#app/components/ui/textarea'
 import { StatusButton } from '#app/components/ui/status-button'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = db.note.findFirst({
@@ -108,6 +108,8 @@ export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
 
+	const formRef = useRef<HTMLFormElement>(null)
+
 	// 🐨 determine whether this form is submitting
 	const isSubmitting = useIsSubmitting()
 	// we can use useId hook for form and input field ids
@@ -127,6 +129,32 @@ export default function NoteEdit() {
 	const contentHasErrors = Boolean(fieldErrors?.content.length)
 	const contentErrorId = contentHasErrors ? 'content-error' : undefined
 
+	// focuses on the first element in the form that
+	// has an error whenever the "actionData" changes
+	// 💰 we only care to focus on an element if:
+	// - the formRef.current is truthy
+	// - the actionData is in an error status
+	// 🐨 if the formRef.current matches the query [aria-invalid="true"] then
+	// focus on the form otherwise, run formRef.current.querySelector to find the
+	// first [aria-invalid="true"] HTMLElement and focus that one instead.
+	// 📜 https://mdn.io/element.matches
+	// 🦺 You may need to add an instanceof HTMLElement check to be able to focus it.
+
+	useEffect(() => {
+		const formEl = formRef.current
+		if (!formEl) return
+		if (actionData?.status !== 'error') return
+
+		if (formEl.matches('[aria-invalid="true"]')) {
+			formEl.focus()
+		} else {
+			const firstInvalid = formEl.querySelector('[aria-invalid="true"]')
+			if (firstInvalid instanceof HTMLElement) {
+				firstInvalid.focus()
+			}
+		}
+	}, [actionData])
+
 	return (
 		<div className="absolute inset-0">
 			<Form
@@ -140,6 +168,10 @@ export default function NoteEdit() {
 				// aria-error is not supported on all browsers
 				// so we use aria-describedby
 				aria-describedby={formErrorId}
+				// 🐨 add a tabIndex={-1} here so we can programmatically focus on the form
+				// 📜 https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex
+				ref={formRef}
+				tabIndex={-1}
 			>
 				<div className="flex flex-col gap-1">
 					<div>
