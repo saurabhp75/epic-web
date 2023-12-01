@@ -10,6 +10,7 @@ import { Form, Link, useLoaderData } from '@remix-run/react'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar'
 import { Button } from '#app/components/ui/button'
 import { type loader as notesLoader } from './notes'
+import { GeneralErrorBoundary } from '#app/components/error-boundary'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = db.note.findFirst({
@@ -93,4 +94,16 @@ export const meta: MetaFunction<
 			content: noteContentsSummary,
 		},
 	]
+}
+
+export function ErrorBoundary() {
+	return (
+		<GeneralErrorBoundary
+			statusHandlers={{
+				404: ({ params }) => (
+					<p>No note with the id "{params.noteId}" exists</p>
+				),
+			}}
+		/>
+	)
 }

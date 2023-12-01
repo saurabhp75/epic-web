@@ -13,6 +13,7 @@ import { Button } from '#app/components/ui/button'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar'
 import { Textarea } from '#app/components/ui/textarea'
 import { StatusButton } from '#app/components/ui/status-button'
+import { GeneralErrorBoundary } from '#app/components/error-boundary'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = db.note.findFirst({
@@ -87,5 +88,17 @@ export default function NoteEdit() {
 				</StatusButton>
 			</div>
 		</Form>
+	)
+}
+
+export function ErrorBoundary() {
+	return (
+		<GeneralErrorBoundary
+			statusHandlers={{
+				404: ({ params }) => (
+					<p>No note with the id "{params.noteId}" exists</p>
+				),
+			}}
+		/>
 	)
 }
