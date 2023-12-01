@@ -16,6 +16,7 @@ import faviconAssetUrl from './assets/favicon.svg'
 import fontStylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
 import { getEnv } from './utils/env.server'
+import { GeneralErrorBoundary } from './components/error-boundary'
 
 // Commented out as it was just to demo Remix Bundling
 // import './styles/global.css'
@@ -55,8 +56,50 @@ export async function loader() {
 }
 
 export default function App() {
+	// throw new Error('🐨 Loader error')
+
 	const data = useLoaderData<typeof loader>()
 
+	return (
+		<Document>
+			<header className="container mx-auto py-6">
+				<nav className="flex justify-between">
+					<Link to="/">
+						<div className="font-light">epic</div>
+						<div className="font-bold">notes</div>
+					</Link>
+					<Link className="underline" to="users/kody/notes/d27a197e">
+						Kody's Notes
+					</Link>
+				</nav>
+			</header>
+
+			<div className="flex-1">
+				<Outlet />
+			</div>
+
+			<div className="container mx-auto flex justify-between">
+				<Link to="/">
+					<div className="font-light">epic</div>
+					<div className="font-bold">notes</div>
+				</Link>
+				<p>Built with ♥️ by {data.username}</p>
+			</div>
+			<div className="h-5" />
+			{/*
+				🐨 add an inline script here using dangerouslySetInnerHTML which
+				sets window.ENV to the JSON.stringified value of data.ENV
+			*/}
+			<script
+				dangerouslySetInnerHTML={{
+					__html: `window.ENV = ${JSON.stringify(data.ENV)}`,
+				}}
+			/>
+		</Document>
+	)
+}
+
+function Document({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en" className="h-full overflow-x-hidden">
 			<head>
@@ -66,43 +109,21 @@ export default function App() {
 				<Links />
 			</head>
 			<body className="flex h-full flex-col justify-between bg-background text-foreground">
-				<header className="container mx-auto py-6">
-					<nav className="flex justify-between">
-						<Link to="/">
-							<div className="font-light">epic</div>
-							<div className="font-bold">notes</div>
-						</Link>
-						<Link className="underline" to="users/kody/notes/d27a197e">
-							Kody's Notes
-						</Link>
-					</nav>
-				</header>
-
-				<div className="flex-1">
-					<Outlet />
-				</div>
-
-				<div className="container mx-auto flex justify-between">
-					<Link to="/">
-						<div className="font-light">epic</div>
-						<div className="font-bold">notes</div>
-					</Link>
-					<p>Built with ♥️ by {data.username}</p>
-				</div>
-				<div className="h-5" />
+				{children}
 				<ScrollRestoration />
-				{/*
-					🐨 add an inline script here using dangerouslySetInnerHTML which
-					sets window.ENV to the JSON.stringified value of data.ENV
-				*/}
-				<script
-					dangerouslySetInnerHTML={{
-						__html: `window.ENV = ${JSON.stringify(data.ENV)}`,
-					}}
-				/>
 				<Scripts />
 				<LiveReload />
 			</body>
 		</html>
+	)
+}
+
+export function ErrorBoundary() {
+	return (
+		<Document>
+			<div className="flex-1">
+				<GeneralErrorBoundary />
+			</div>
+		</Document>
 	)
 }
