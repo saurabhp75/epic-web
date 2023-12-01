@@ -9,6 +9,7 @@ import { floatingToolbarClassName } from '#app/components/floating-toolbar'
 import { Textarea } from '#app/components/ui/textarea'
 import { StatusButton } from '#app/components/ui/status-button'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
+import { useEffect, useState } from 'react'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = db.note.findFirst({
@@ -97,6 +98,12 @@ function ErrorList({ errors }: { errors?: Array<string> | null }) {
 	) : null
 }
 
+function useHydrated() {
+	const [hydrated, setHydrated] = useState(false)
+	useEffect(() => setHydrated(true), [])
+	return hydrated
+}
+
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
@@ -110,13 +117,17 @@ export default function NoteEdit() {
 	const formErrors =
 		actionData?.status === 'error' ? actionData.errors.formErrors : null
 
+	const isHydrated = useHydrated()
+
 	return (
 		<div className="absolute inset-0">
 			<Form
 				id={formId}
-				noValidate
+				// Do client side html validation before JS is loaded
+				// After JS loads, all validation done @ server side!!
+				noValidate={isHydrated}
 				method="POST"
-				className="flex h-full flex-col gap-y-4 overflow-x-hidden px-10 pb-28 pt-12"
+				className="flex h-full flex-col gap-y-4 overflow-y-auto overflow-x-hidden px-10 pb-28 pt-12"
 			>
 				<div className="flex flex-col gap-1">
 					<div>
