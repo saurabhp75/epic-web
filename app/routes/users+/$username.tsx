@@ -1,4 +1,10 @@
-import { Link, useLoaderData, useRouteError } from '@remix-run/react'
+import {
+	Link,
+	isRouteErrorResponse,
+	useLoaderData,
+	useParams,
+	useRouteError,
+} from '@remix-run/react'
 import { db } from '#app/utils/db.server'
 import { json, type DataFunctionArgs, type MetaFunction } from '@remix-run/node'
 import { invariantResponse } from '#app/utils/misc'
@@ -56,11 +62,20 @@ export const meta: MetaFunction<typeof loader> = ({ data, params }) => {
 // errors in useEffect as it is in React's control
 export function ErrorBoundary() {
 	const error = useRouteError()
+	// 🐨 get the params so we can display the username that is causing the error
+	const params = useParams()
 	console.error(error)
+
+	let errorMessage = <p>Oh no, something went wrong. Sorry about that.</p>
+
+	// 💰 isRouteErrorResponse checks whether the error is a Response.
+	if (isRouteErrorResponse(error) && error.status === 404) {
+		errorMessage = <p>No user with the username "{params.username}" exists</p>
+	}
 
 	return (
 		<div className="container mx-auto flex h-full w-full items-center justify-center bg-destructive p-20 text-h2 text-destructive-foreground">
-			<p>Oh no, something went wrong. Sorry about that.</p>
+			{errorMessage}
 		</div>
 	)
 }
