@@ -86,11 +86,11 @@ export async function action({ request, params }: DataFunctionArgs) {
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
 
-function ErrorList({ errors }: { errors?: Array<string> | null }) {
+function ErrorList({ id, errors }: { id?: string, errors?: Array<string> | null }) {
 	return errors?.length ? (
 		<ul className="flex flex-col gap-1">
 			{errors.map((error, i) => (
-				<li key={i} className="text-[10px] text-foreground-destructive">
+				<li id={id} key={i} className="text-[10px] text-foreground-destructive">
 					{error}
 				</li>
 			))}
@@ -120,6 +120,13 @@ export default function NoteEdit() {
 
 	const isHydrated = useHydrated()
 
+	const formHasErrors = Boolean(formErrors?.length)
+	const formErrorId = formHasErrors ? 'form-error' : undefined
+	const titleHasErrors = Boolean(fieldErrors?.title.length)
+	const titleErrorId = titleHasErrors ? 'title-error' : undefined
+	const contentHasErrors = Boolean(fieldErrors?.content.length)
+	const contentErrorId = contentHasErrors ? 'content-error' : undefined
+
 	return (
 		<div className="absolute inset-0">
 			<Form
@@ -129,6 +136,10 @@ export default function NoteEdit() {
 				noValidate={isHydrated}
 				method="POST"
 				className="flex h-full flex-col gap-y-4 overflow-y-auto overflow-x-hidden px-10 pb-28 pt-12"
+				aria-invalid={formHasErrors || undefined}
+				// aria-error is not supported on all browsers
+				// so we use aria-describedby
+				aria-describedby={formErrorId}
 			>
 				<div className="flex flex-col gap-1">
 					<div>
@@ -139,9 +150,12 @@ export default function NoteEdit() {
 							defaultValue={data.note.title}
 							required
 							maxLength={titleMaxLength}
+							aria-invalid={titleHasErrors || undefined}
+							aria-describedby={titleErrorId}
+							autoFocus
 						/>
 						<div className="min-h-[32px] px-4 pb-3 pt-1">
-							<ErrorList errors={fieldErrors?.title} />
+							<ErrorList id={titleErrorId} errors={fieldErrors?.title} />
 						</div>
 					</div>
 					<div>
@@ -152,13 +166,15 @@ export default function NoteEdit() {
 							defaultValue={data.note.content}
 							required
 							maxLength={contentMaxLength}
+							aria-invalid={contentHasErrors || undefined}
+							aria-describedby={contentErrorId}
 						/>
 						<div className="min-h-[32px] px-4 pb-3 pt-1">
-							<ErrorList errors={fieldErrors?.content} />
+							<ErrorList id={contentErrorId} errors={fieldErrors?.content} />
 						</div>
 					</div>
 				</div>
-				<ErrorList errors={formErrors} />
+				<ErrorList id={formErrorId} errors={formErrors} />
 			</Form>
 			<div className={floatingToolbarClassName}>
 				<Button form={formId} variant="destructive" type="reset">
