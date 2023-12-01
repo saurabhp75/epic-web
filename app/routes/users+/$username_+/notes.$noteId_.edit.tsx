@@ -1,3 +1,4 @@
+import { parse } from '@conform-to/zod'
 import { json, type DataFunctionArgs, redirect } from '@remix-run/node'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
 import { db } from '#app/utils/db.server'
@@ -49,18 +50,16 @@ export async function action({ request, params }: DataFunctionArgs) {
 
 	const formData = await request.formData()
 
-	const result = NoteEditorSchema.safeParse({
-		title: formData.get('title'),
-		content: formData.get('content'),
+	const submission = parse(formData, {
+		schema: NoteEditorSchema,
 	})
 
-	if (!result.success) {
-		return json({ status: 'error', errors: result.error.flatten() } as const, {
-			status: 400,
-		})
+	if (!submission.value) {
+		// Send the submitted data back in case of error
+		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { title, content } = result.data
+	const { title, content } = submission.value
 
 	db.note.update({
 		where: { id: { equals: params.noteId } },
@@ -106,9 +105,11 @@ export default function NoteEdit() {
 	const formId = 'note-editor'
 
 	const fieldErrors =
-		actionData?.status === 'error' ? actionData.errors.fieldErrors : null
+		actionData?.status === 'error' ? actionData.submission.error : null
+	// we'll use actionData.submission.error['']
+	// (Yeah, it's weird and will change... https://github.com/edmundhung/conform/issues/211)
 	const formErrors =
-		actionData?.status === 'error' ? actionData.errors.formErrors : null
+		actionData?.status === 'error' ? actionData.submission.error[''] : null
 
 	const isHydrated = useHydrated()
 
