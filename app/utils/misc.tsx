@@ -79,25 +79,25 @@ export function useIsSubmitting({
 	)
 }
 
-
 /**
  * A hook that focuses the first invalid element in a form.
+ * Replaced by conform.
  */
-export function useFocusInvalid(
-	formEl: HTMLFormElement | null,
-	hasErrors: boolean,
-) {
-	useEffect(() => {
-		if (!formEl) return
-		if (!hasErrors) return
+// export function useFocusInvalid(
+// 	formEl: HTMLFormElement | null,
+// 	hasErrors: boolean,
+// ) {
+// 	useEffect(() => {
+// 		if (!formEl) return
+// 		if (!hasErrors) return
 
-		if (formEl.matches('[aria-invalid="true"]')) {
-			formEl.focus()
-		} else {
-			const firstInvalid = formEl.querySelector('[aria-invalid="true"]')
-			if (firstInvalid instanceof HTMLElement) {
-				firstInvalid.focus()
-			}
-		}
-	}, [formEl, hasErrors])
-}
+// 		if (formEl.matches('[aria-invalid="true"]')) {
+// 			formEl.focus()
+// 		} else {
+// 			const firstInvalid = formEl.querySelector('[aria-invalid="true"]')
+// 			if (firstInvalid instanceof HTMLElement) {
+// 				firstInvalid.focus()
+// 			}
+// 		}
+// 	}, [formEl, hasErrors])
+// }
