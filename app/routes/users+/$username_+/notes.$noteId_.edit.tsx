@@ -26,6 +26,8 @@ import {
 	list,
 } from '@conform-to/react'
 import { useRef, useState } from 'react'
+import { validateCSRF } from '#app/utils/csrf.server'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = db.note.findFirst({
@@ -80,6 +82,8 @@ export async function action({ request, params }: DataFunctionArgs) {
 		request,
 		createMemoryUploadHandler({ maxPartSize: MAX_UPLOAD_SIZE }),
 	)
+
+	await validateCSRF(formData, request.headers)
 
 	const submission = parse(formData, {
 		schema: NoteEditorSchema,
@@ -155,6 +159,7 @@ export default function NoteEdit() {
 				{...form.props}
 				encType="multipart/form-data"
 			>
+				<AuthenticityTokenInput />
 				{/*
 					This hidden submit button is here to ensure that when the user hits
 					"enter" on an input field, the primary form function is submitted

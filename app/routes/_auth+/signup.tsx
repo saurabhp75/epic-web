@@ -9,9 +9,12 @@ import { Input } from '#app/components/ui/input'
 import { Label } from '#app/components/ui/label'
 import { checkHoneypot } from '#app/utils/honeypot.server'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
+import { validateCSRF } from '#app/utils/csrf.server'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 export async function action({ request }: DataFunctionArgs) {
 	const formData = await request.formData()
+	await validateCSRF(formData, request.headers)
 	// 🐨 throw a 400 response if the name field is filled out
 	// we'll implement signup later
 	checkHoneypot(formData)
@@ -32,6 +35,7 @@ export default function SignupRoute() {
 					method="POST"
 					className="mx-auto flex min-w-[368px] max-w-sm flex-col gap-4"
 				>
+					<AuthenticityTokenInput />
 					{/* 🐨 render a hidden div with an "name" input */}
 					{/* 🦉 think about the accessibility implications. */}
 					{/* make sure screen readers will ignore this field */}
