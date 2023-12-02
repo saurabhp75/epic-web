@@ -11,6 +11,9 @@ import { floatingToolbarClassName } from '#app/components/floating-toolbar'
 import { Button } from '#app/components/ui/button'
 import { type loader as notesLoader } from './notes'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
+import { csrf } from '#app/utils/csrf.server'
+import { CSRFError } from 'remix-utils/csrf/server'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = db.note.findFirst({
@@ -35,6 +38,17 @@ export async function loader({ params }: DataFunctionArgs) {
 export async function action({ request, params }: DataFunctionArgs) {
 	const formData = await request.formData()
 	const intent = formData.get('intent')
+
+	// 🐨 validate the token here
+	// send a 403 response if the token is invalid
+	try {
+		await csrf.validate(formData, request.headers)
+	} catch (error) {
+		if (error instanceof CSRFError) {
+			throw new Response('Invalid CSRF token', { status: 403 })
+		}
+		throw error
+	}
 
 	invariantResponse(intent === 'delete', 'Invalid intent')
 	db.note.delete({ where: { id: { equals: params.noteId } } })
@@ -67,6 +81,7 @@ export default function NoteRoute() {
 			</div>
 			<div className={floatingToolbarClassName}>
 				<Form method="POST">
+					<AuthenticityTokenInput />
 					<Button
 						name="intent"
 						value="delete"

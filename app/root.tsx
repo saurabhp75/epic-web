@@ -1,6 +1,11 @@
 import os from 'node:os'
 import { cssBundleHref } from '@remix-run/css-bundle'
-import { json, type MetaFunction, type LinksFunction } from '@remix-run/node'
+import {
+	json,
+	type MetaFunction,
+	type LinksFunction,
+	type DataFunctionArgs,
+} from '@remix-run/node'
 import {
 	Link,
 	Links,
@@ -19,6 +24,8 @@ import { getEnv } from './utils/env.server'
 import { GeneralErrorBoundary } from './components/error-boundary'
 import { honeypot } from './utils/honeypot.server'
 import { HoneypotProvider } from 'remix-utils/honeypot/react'
+import { csrf } from './utils/csrf.server'
+import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 
 // Commented out as it was just to demo Remix Bundling
 // import './styles/global.css'
@@ -46,7 +53,7 @@ export const meta: MetaFunction = () => {
 	]
 }
 
-export async function loader() {
+export async function loader({ request }: DataFunctionArgs) {
 	// The two return below are exactly same, json() is a
 	// handy utility for sending responses
 	// return json({ hello: 'world' })
@@ -55,11 +62,16 @@ export async function loader() {
 	// })
 
 	const honeyProps = honeypot.getInputProps()
-	return json({
-		username: os.userInfo().username,
-		ENV: getEnv(),
-		honeyProps,
-	})
+	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
+	// 🐨 get the csrfToken and csrfCookieHeader from csrf.commitToken
+	// 🐨 add the csrfToken to this object
+	// 🐨 add a 'set-cookie' header to the response with the csrfCookieHeader
+	return json(
+		{ username: os.userInfo().username, ENV: getEnv(), honeyProps, csrfToken },
+		{
+			headers: csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : {},
+		},
+	)
 }
 
 function App() {
@@ -109,9 +121,11 @@ function App() {
 export default function AppWithProviders() {
 	const data = useLoaderData<typeof loader>()
 	return (
-		<HoneypotProvider {...data.honeyProps}>
-			<App />
-		</HoneypotProvider>
+		<AuthenticityTokenProvider token={data.csrfToken}>
+			<HoneypotProvider {...data.honeyProps}>
+				<App />
+			</HoneypotProvider>
+		</AuthenticityTokenProvider>
 	)
 }
 
