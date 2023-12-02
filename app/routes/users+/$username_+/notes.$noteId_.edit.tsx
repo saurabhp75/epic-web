@@ -18,7 +18,13 @@ import { StatusButton } from '#app/components/ui/status-button'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
 import { z } from 'zod'
 import type { FieldConfig } from '@conform-to/react'
-import { useForm, conform, useFieldset } from '@conform-to/react'
+import {
+	useForm,
+	conform,
+	useFieldset,
+	useFieldList,
+	list,
+} from '@conform-to/react'
 import { useRef, useState } from 'react'
 
 export async function loader({ params }: DataFunctionArgs) {
@@ -64,7 +70,7 @@ const NoteEditorSchema = z.object({
 		.min(1, { message: 'title is required' })
 		.max(titleMaxLength),
 	content: z.string().min(1).max(contentMaxLength),
-	image: ImageFieldsetSchema,
+	images: z.array(ImageFieldsetSchema),
 })
 
 export async function action({ request, params }: DataFunctionArgs) {
@@ -79,19 +85,20 @@ export async function action({ request, params }: DataFunctionArgs) {
 		schema: NoteEditorSchema,
 	})
 
+	// 🐨 If the submission.intent is not "submit" then return the submission with
+	// a status of 'idle' and the submission.
+	// when will this usecase happen?
+	if (submission.intent !== 'submit') {
+		return json({ status: 'idle', submission } as const)
+	}
+
 	if (!submission.value) {
 		// Send the submitted data back in case of error
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { title, content, image } = submission.value
-
-	await updateNote({
-		id: params.noteId,
-		title,
-		content,
-		images: [image],
-	})
+	const { title, content, images } = submission.value
+	await updateNote({ id: params.noteId, title, content, images })
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
@@ -134,9 +141,11 @@ export default function NoteEdit() {
 		defaultValue: {
 			title: data.note.title,
 			content: data.note.content,
-			image: data.note.images[0],
+			images: data.note.images.length ? data.note.images : [{}],
 		},
 	})
+
+	const imageList = useFieldList(form.ref, fields.images)
 
 	return (
 		<div className="absolute inset-0">
@@ -146,6 +155,12 @@ export default function NoteEdit() {
 				{...form.props}
 				encType="multipart/form-data"
 			>
+				{/*
+					This hidden submit button is here to ensure that when the user hits
+					"enter" on an input field, the primary form function is submitted
+					rather than the first button in the form (which is delete/add image).
+				*/}
+				<button type="submit" className="hidden" />
 				<div className="flex flex-col gap-1">
 					<div>
 						<Label htmlFor={fields.title.id}>Title</Label>
@@ -168,9 +183,32 @@ export default function NoteEdit() {
 						</div>
 					</div>
 					<div>
-						<Label>Image</Label>
-						<ImageChooser config={fields.image} />
+						<Label>Images</Label>
+						<ul className="flex flex-col gap-4">
+							{imageList.map((image, index) => (
+								<li
+									className="relative border-b-2 border-muted-foreground"
+									key={image.key}
+								>
+									<button
+										className="text-foreground-destructive absolute right-0 top-0"
+										{...list.remove(fields.images.name, { index })}
+									>
+										<span aria-hidden>❌</span>{' '}
+										<span className="sr-only">Remove image {index + 1}</span>
+									</button>
+									<ImageChooser config={image} />
+								</li>
+							))}
+						</ul>
 					</div>
+					<Button
+						className="mt-3"
+						{...list.insert(fields.images.name, { defaultValue: {} })}
+					>
+						<span aria-hidden>➕ Image</span>{' '}
+						<span className="sr-only">Add image</span>
+					</Button>
 				</div>
 				<ErrorList id={form.errorId} errors={form.errors} />
 			</Form>
