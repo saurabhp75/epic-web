@@ -7,22 +7,14 @@ import { Form } from '@remix-run/react'
 import { Button } from '#app/components/ui/button'
 import { Input } from '#app/components/ui/input'
 import { Label } from '#app/components/ui/label'
-import { honeypot } from '#app/utils/honeypot.server'
-import { SpamError } from 'remix-utils/honeypot/server'
+import { checkHoneypot } from '#app/utils/honeypot.server'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
 
 export async function action({ request }: DataFunctionArgs) {
 	const formData = await request.formData()
 	// 🐨 throw a 400 response if the name field is filled out
 	// we'll implement signup later
-	try {
-		honeypot.check(formData)
-	} catch (error) {
-		if (error instanceof SpamError) {
-			throw new Response('Form not submitted properly', { status: 400 })
-		}
-		throw error
-	}
+	checkHoneypot(formData)
 	return redirect('/')
 }
 
