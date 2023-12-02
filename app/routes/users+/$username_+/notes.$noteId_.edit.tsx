@@ -17,8 +17,9 @@ import { Textarea } from '#app/components/ui/textarea'
 import { StatusButton } from '#app/components/ui/status-button'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
 import { z } from 'zod'
-import { useForm, conform } from '@conform-to/react'
-import { useState } from 'react'
+import type { FieldConfig } from '@conform-to/react'
+import { useForm, conform, useFieldset } from '@conform-to/react'
+import { useRef, useState } from 'react'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = db.note.findFirst({
@@ -45,14 +46,8 @@ const contentMaxLength = 10000
 
 const MAX_UPLOAD_SIZE = 1024 * 1024 * 3 // 3MB
 
-const NoteEditorSchema = z.object({
-	// We can optionally add an error message to zod
-	title: z
-		.string()
-		.min(1, { message: 'title is required' })
-		.max(titleMaxLength),
-	content: z.string().min(1).max(contentMaxLength),
-	imageId: z.string().optional(),
+const ImageFieldsetSchema = z.object({
+	id: z.string().optional(),
 	file: z
 		.instanceof(File)
 		.refine(file => {
@@ -60,6 +55,16 @@ const NoteEditorSchema = z.object({
 		}, 'File size must be less than 3MB')
 		.optional(),
 	altText: z.string().optional(),
+})
+
+const NoteEditorSchema = z.object({
+	// We can optionally add an error message to zod
+	title: z
+		.string()
+		.min(1, { message: 'title is required' })
+		.max(titleMaxLength),
+	content: z.string().min(1).max(contentMaxLength),
+	image: ImageFieldsetSchema,
 })
 
 export async function action({ request, params }: DataFunctionArgs) {
@@ -79,13 +84,13 @@ export async function action({ request, params }: DataFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { title, content, file, imageId, altText } = submission.value
+	const { title, content, image } = submission.value
 
 	await updateNote({
 		id: params.noteId,
 		title,
 		content,
-		images: [{ file, id: imageId, altText }],
+		images: [image],
 	})
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
@@ -129,6 +134,7 @@ export default function NoteEdit() {
 		defaultValue: {
 			title: data.note.title,
 			content: data.note.content,
+			image: data.note.images[0],
 		},
 	})
 
@@ -163,7 +169,7 @@ export default function NoteEdit() {
 					</div>
 					<div>
 						<Label>Image</Label>
-						<ImageChooser image={data.note.images[0]} />
+						<ImageChooser config={fields.image} />
 					</div>
 				</div>
 				<ErrorList id={form.errorId} errors={form.errors} />
@@ -187,22 +193,28 @@ export default function NoteEdit() {
 
 function ImageChooser({
 	image,
+	config,
 }: {
 	image?: { id: string; altText?: string | null }
+	config: FieldConfig<z.infer<typeof ImageFieldsetSchema>>
 }) {
-	const existingImage = Boolean(image)
+	// 🐨 the existingImage should now be based on whether fields.id.defaultValue is set
+	const ref = useRef<HTMLFieldSetElement>(null)
+	const fields = useFieldset(ref, config)
+	const existingImage = Boolean(fields.id.defaultValue)
+
 	const [previewImage, setPreviewImage] = useState<string | null>(
-		existingImage ? `/resources/images/${image?.id}` : null,
+		existingImage ? `/resources/images/${fields.id.defaultValue}` : null,
 	)
-	const [altText, setAltText] = useState(image?.altText ?? '')
+	const [altText, setAltText] = useState(fields.altText.defaultValue ?? '')
 
 	return (
-		<fieldset>
+		<fieldset ref={ref} {...conform.fieldset(config)}>
 			<div className="flex gap-3">
 				<div className="w-32">
 					<div className="relative h-32 w-32">
 						<label
-							htmlFor="image-input"
+							htmlFor={fields.file.id}
 							className={cn('group absolute h-32 w-32 rounded-lg', {
 								'bg-accent opacity-40 focus-within:opacity-100 hover:opacity-100':
 									!previewImage,
@@ -229,10 +241,13 @@ function ImageChooser({
 							)}
 							{/* Send the image-id of existing image for update */}
 							{existingImage ? (
-								<input name="imageId" type="hidden" value={image?.id} />
+								<input
+									{...conform.input(fields.id, {
+										type: 'hidden',
+									})}
+								/>
 							) : null}
 							<input
-								id="image-input"
 								aria-label="Image"
 								className="absolute left-0 top-0 z-0 h-32 w-32 cursor-pointer opacity-0"
 								onChange={event => {
@@ -248,19 +263,18 @@ function ImageChooser({
 										setPreviewImage(null)
 									}
 								}}
-								name="file"
-								type="file"
 								accept="image/*"
+								{...conform.input(fields.file, {
+									type: 'file',
+								})}
 							/>
 						</label>
 					</div>
 				</div>
 				<div className="flex-1">
-					<Label htmlFor="alt-text">Alt Text</Label>
+					<Label htmlFor={fields.altText.id}>Alt Text</Label>
 					<Textarea
-						id="alt-text"
-						name="altText"
-						defaultValue={altText}
+						{...conform.textarea(fields.altText)}
 						onChange={e => setAltText(e.currentTarget.value)}
 					/>
 				</div>
