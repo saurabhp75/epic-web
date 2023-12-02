@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev --manual",
+    "dev": "remix dev -c \"node ./server/dev-server.js\" --manual",
     "start": "remix-serve ./build/index.js",
     "typecheck": "tsc"
   },
@@ -26,6 +26,7 @@
     "clsx": "^2.0.0",
     "compression": "^1.7.4",
     "crypto-js": "^4.2.0",
+    "execa": "^8.0.1",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
     "get-port": "^7.0.0",

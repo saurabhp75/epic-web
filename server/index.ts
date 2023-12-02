@@ -10,6 +10,7 @@ import compression from 'compression'
 import express from 'express'
 import getPort, { portNumbers } from 'get-port'
 import morgan from 'morgan'
+import rateLimit from 'express-rate-limit'
 
 const MODE = process.env.NODE_ENV
 const BUILD_PATH = '../build/index.js'
@@ -71,6 +72,42 @@ app.use(express.static('public', { maxAge: '1h' }))
 morgan.token('url', req => decodeURIComponent(req.url ?? ''))
 app.use(morgan('tiny'))
 
+// When running tests or running in development, we want to effectively disable
+// rate limiting because playwright tests are very fast and we don't want to
+// have to wait for the rate limit to reset between tests.
+const limitMultiple = process.env.TESTING ? 10_000 : 1
+
+const rateLimitDefault = {
+	windowMs: 60 * 1000,
+	limit: 1000 * limitMultiple,
+	standardHeaders: true,
+	legacyHeaders: false,
+}
+
+const strongestRateLimit = rateLimit({
+	...rateLimitDefault,
+	limit: 10 * limitMultiple,
+})
+
+const strongRateLimit = rateLimit({
+	...rateLimitDefault,
+	limit: 100 * limitMultiple,
+})
+
+const generalRateLimit = rateLimit(rateLimitDefault)
+
+app.use((req, res, next) => {
+	const strongPaths = ['/signup']
+	if (req.method !== 'GET' && req.method !== 'HEAD') {
+		if (strongPaths.some(p => req.path.includes(p))) {
+			return strongestRateLimit(req, res, next)
+		}
+		return strongRateLimit(req, res, next)
+	}
+
+	return generalRateLimit(req, res, next)
+})
+
 app.use((_, res, next) => {
 	res.locals.cspNonce = crypto.randomBytes(16).toString('hex')
 	next()
@@ -101,8 +138,8 @@ const server = app.listen(portToUse, () => {
 		desiredPort === portToUse
 			? desiredPort
 			: addy && typeof addy === 'object'
-			? addy.port
-			: 0
+			  ? addy.port
+			  : 0
 
 	if (portUsed !== desiredPort) {
 		console.warn(
