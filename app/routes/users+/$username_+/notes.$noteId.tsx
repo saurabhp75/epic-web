@@ -11,8 +11,7 @@ import { floatingToolbarClassName } from '#app/components/floating-toolbar'
 import { Button } from '#app/components/ui/button'
 import { type loader as notesLoader } from './notes'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
-import { csrf, validateCSRF } from '#app/utils/csrf.server'
-import { CSRFError } from 'remix-utils/csrf/server'
+import { validateCSRF } from '#app/utils/csrf.server'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 export async function loader({ params }: DataFunctionArgs) {
