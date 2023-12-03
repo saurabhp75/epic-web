@@ -1,11 +1,10 @@
-import {
-	Link,
-	useLoaderData,
-} from '@remix-run/react'
+import { Link, useLoaderData } from '@remix-run/react'
 import { db } from '#app/utils/db.server'
 import { json, type DataFunctionArgs, type MetaFunction } from '@remix-run/node'
-import { invariantResponse } from '#app/utils/misc'
+import { getUserImgSrc, invariantResponse } from '#app/utils/misc'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
+import { Button } from '#app/components/ui/button'
+import { Spacer } from '#app/components/spacer'
 
 export async function loader({ params }: DataFunctionArgs) {
 	// Below error will be caught by error boundary
@@ -27,7 +26,12 @@ export async function loader({ params }: DataFunctionArgs) {
 	invariantResponse(user, 'user not found', { status: 404 })
 
 	return json({
-		user: { name: user.name, username: user.username },
+		user: {
+			name: user.name,
+			username: user.username,
+			image: user.image ? { id: user.image.id } : undefined,
+		},
+		userJoinedDisplay: new Date(user.createdAt).toLocaleDateString(),
 	})
 }
 
@@ -36,13 +40,44 @@ export default function ProfileRoute() {
 	// throw new Error('🐨 Loader error')
 
 	const data = useLoaderData<typeof loader>()
+	const user = data.user
+	const userDisplayName = user.name ?? user.username
 
 	return (
-		<div className="container mb-48 mt-36">
-			<h1 className="text-h1">{data.user.name ?? data.user.username}</h1>
-			<Link to="notes" className="underline" prefetch="intent">
-				Notes
-			</Link>
+		<div className="container mb-48 mt-36 flex flex-col items-center justify-center">
+			<Spacer size="4xs" />
+
+			<div className="container flex flex-col items-center rounded-3xl bg-muted p-12">
+				<div className="relative w-52">
+					<div className="absolute -top-40">
+						<div className="relative">
+							<img
+								src={getUserImgSrc(data.user.image?.id)}
+								alt={userDisplayName}
+								className="h-52 w-52 rounded-full object-cover"
+							/>
+						</div>
+					</div>
+				</div>
+
+				<Spacer size="sm" />
+
+				<div className="flex flex-col items-center">
+					<div className="flex flex-wrap items-center justify-center gap-4">
+						<h1 className="text-center text-h2">{userDisplayName}</h1>
+					</div>
+					<p className="mt-2 text-center text-muted-foreground">
+						Joined {data.userJoinedDisplay}
+					</p>
+					<div className="mt-10 flex gap-4">
+						<Button asChild>
+							<Link to="notes" prefetch="intent">
+								{userDisplayName}'s notes
+							</Link>
+						</Button>
+					</div>
+				</div>
+			</div>
 		</div>
 	)
 }
