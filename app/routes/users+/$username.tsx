@@ -1,5 +1,5 @@
 import { Link, useLoaderData } from '@remix-run/react'
-import { db } from '#app/utils/db.server'
+import { prisma } from '#app/utils/db.server'
 import { json, type DataFunctionArgs, type MetaFunction } from '@remix-run/node'
 import { getUserImgSrc, invariantResponse } from '#app/utils/misc'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
@@ -10,11 +10,17 @@ export async function loader({ params }: DataFunctionArgs) {
 	// Below error will be caught by error boundary
 	// throw new Error('🐨 Loader error')
 
-	const user = db.user.findFirst({
+	const user = await prisma.user.findFirst({
+		// Select only the needed columns
+		select: {
+			name: true,
+			username: true,
+			createdAt: true,
+			// Only the id of image is needed on the page
+			image: { select: { id: true } },
+		},
 		where: {
-			username: {
-				equals: params.username,
-			},
+			username: params.username,
 		},
 	})
 
@@ -22,15 +28,10 @@ export async function loader({ params }: DataFunctionArgs) {
 	// if (!user) {
 	// 	throw new Response('user not found', { status: 404 })
 	// }
-
 	invariantResponse(user, 'user not found', { status: 404 })
 
 	return json({
-		user: {
-			name: user.name,
-			username: user.username,
-			image: user.image ? { id: user.image.id } : undefined,
-		},
+		user,
 		userJoinedDisplay: new Date(user.createdAt).toLocaleDateString(),
 	})
 }
@@ -81,6 +82,7 @@ export default function ProfileRoute() {
 		</div>
 	)
 }
+
 
 export const meta: MetaFunction<typeof loader> = ({ data, params }) => {
 	const displayName = data?.user.name ?? params.username
