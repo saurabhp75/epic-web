@@ -1,5 +1,5 @@
-import { db } from '#app/utils/db.server'
-import { invariantResponse } from '#app/utils/misc'
+import { prisma } from '#app/utils/db.server'
+import { getNoteImgSrc, invariantResponse } from '#app/utils/misc'
 import {
 	json,
 	type DataFunctionArgs,
@@ -15,23 +15,20 @@ import { validateCSRF } from '#app/utils/csrf.server'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 export async function loader({ params }: DataFunctionArgs) {
-	const note = db.note.findFirst({
-		where: {
-			id: {
-				equals: params.noteId,
+	const note = await prisma.note.findFirst({
+		select: {
+			title: true,
+			content: true,
+			images: {
+				select: { id: true, altText: true },
 			},
 		},
+		where: { id: params.noteId },
 	})
 
 	invariantResponse(note, 'note not found', { status: 404 })
 
-	return json({
-		note: {
-			title: note.title,
-			content: note.content,
-			images: note.images.map(i => ({ id: i.id, altText: i.altText })),
-		},
-	})
+	return json({ note })
 }
 
 export async function action({ request, params }: DataFunctionArgs) {
@@ -43,7 +40,7 @@ export async function action({ request, params }: DataFunctionArgs) {
 
 	const intent = formData.get('intent')
 	invariantResponse(intent === 'delete', 'Invalid intent')
-	db.note.delete({ where: { id: { equals: params.noteId } } })
+	await prisma.note.delete({ where: { id: params.noteId } })
 	return redirect(`/users/${params.username}/notes`)
 }
 
@@ -57,9 +54,9 @@ export default function NoteRoute() {
 				<ul className="flex flex-wrap gap-5 py-5">
 					{data.note.images.map(image => (
 						<li key={image.id}>
-							<a href={`/resources/images/${image.id}`}>
+							<a href={getNoteImgSrc(image.id)}>
 								<img
-									src={`/resources/images/${image.id}`}
+									src={getNoteImgSrc(image.id)}
 									alt={image.altText ?? ''}
 									className="h-32 w-32 rounded-lg object-cover"
 								/>
