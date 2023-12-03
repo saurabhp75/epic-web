@@ -6,9 +6,15 @@ import {
 	unstable_createMemoryUploadHandler as createMemoryUploadHandler,
 	unstable_parseMultipartFormData as parseMultipartFormData,
 } from '@remix-run/node'
+import { createId as cuid } from '@paralleldrive/cuid2'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
-import { db, updateNote } from '#app/utils/db.server'
-import { cn, invariantResponse, useIsSubmitting } from '#app/utils/misc'
+import { prisma } from '#app/utils/db.server'
+import {
+	cn,
+	getNoteImgSrc,
+	invariantResponse,
+	useIsSubmitting,
+} from '#app/utils/misc'
 import { Label } from '@radix-ui/react-label'
 import { Input } from '#app/components/ui/input'
 import { Button } from '#app/components/ui/button'
@@ -30,23 +36,20 @@ import { validateCSRF } from '#app/utils/csrf.server'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 export async function loader({ params }: DataFunctionArgs) {
-	const note = db.note.findFirst({
-		where: {
-			id: {
-				equals: params.noteId,
+	const note = await prisma.note.findFirst({
+		where: { id: params.noteId },
+		select: {
+			title: true,
+			content: true,
+			images: {
+				select: { id: true, altText: true },
 			},
 		},
 	})
 
 	invariantResponse(note, 'Note not found', { status: 404 })
 
-	return json({
-		note: {
-			title: note.title,
-			content: note.content,
-			images: note.images.map(i => ({ id: i.id, altText: i.altText })),
-		},
-	})
+	return json({ note })
 }
 
 const titleMaxLength = 100
@@ -64,6 +67,20 @@ const ImageFieldsetSchema = z.object({
 		.optional(),
 	altText: z.string().optional(),
 })
+
+type ImageFieldset = z.infer<typeof ImageFieldsetSchema>
+
+function imageHasFile(
+	image: ImageFieldset,
+): image is ImageFieldset & { file: NonNullable<ImageFieldset['file']> } {
+	return Boolean(image.file?.size && image.file?.size > 0)
+}
+
+function imageHasId(
+	image: ImageFieldset,
+): image is ImageFieldset & { id: NonNullable<ImageFieldset['id']> } {
+	return image.id != null
+}
 
 const NoteEditorSchema = z.object({
 	// We can optionally add an error message to zod
@@ -85,8 +102,39 @@ export async function action({ request, params }: DataFunctionArgs) {
 
 	await validateCSRF(formData, request.headers)
 
-	const submission = parse(formData, {
-		schema: NoteEditorSchema,
+	const submission = await parse(formData, {
+		schema: NoteEditorSchema.transform(async ({ images = [], ...data }) => {
+			return {
+				...data,
+				imageUpdates: await Promise.all(
+					images.filter(imageHasId).map(async i => {
+						if (imageHasFile(i)) {
+							return {
+								id: i.id,
+								altText: i.altText,
+								contentType: i.file.type,
+								blob: Buffer.from(await i.file.arrayBuffer()),
+							}
+						} else {
+							return { id: i.id, altText: i.altText }
+						}
+					}),
+				),
+				newImages: await Promise.all(
+					images
+						.filter(imageHasFile)
+						.filter(i => !i.id)
+						.map(async image => {
+							return {
+								altText: image.altText,
+								contentType: image.file.type,
+								blob: Buffer.from(await image.file.arrayBuffer()),
+							}
+						}),
+				),
+			}
+		}),
+		async: true,
 	})
 
 	// 🐨 If the submission.intent is not "submit" then return the submission with
@@ -101,8 +149,46 @@ export async function action({ request, params }: DataFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { title, content, images } = submission.value
-	await updateNote({ id: params.noteId, title, content, images })
+	const { title, content, imageUpdates = [], newImages = [] } = submission.value
+
+	// 🐨 Update the note's title and content
+	await prisma.note.update({
+		select: { id: true },
+		where: { id: params.noteId },
+		data: { title, content },
+	})
+
+	// 🐨 use deleteMany on the noteImage to delete all images where:
+	// - their noteId is the params.noteId
+	// - their id is not in the imageUpdates array (💰 imageUpdates.map(i => i.id))
+	//   📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#notin
+	//   📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#deletemany
+	await prisma.noteImage.deleteMany({
+		where: {
+			id: { notIn: imageUpdates.map(i => i.id) },
+			noteId: params.noteId,
+		},
+	})
+
+	// 🐨 iterate all the imageUpdates and update the image.
+	// 💯 If there's a blob, then set the id to a new cuid() (💰 check the imports above)
+	// so we handle caching properly.
+	for (const updates of imageUpdates) {
+		await prisma.noteImage.update({
+			select: { id: true },
+			where: { id: updates.id },
+			// update the image-id to invalidate the cache
+			data: { ...updates, id: updates.blob ? cuid() : updates.id },
+		})
+	}
+
+	// 🐨 iterate over the newImages and create a new noteImage for each one.
+	for (const newImage of newImages) {
+		await prisma.noteImage.create({
+			select: { id: true },
+			data: { ...newImage, noteId: params.noteId },
+		})
+	}
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
@@ -235,10 +321,8 @@ export default function NoteEdit() {
 }
 
 function ImageChooser({
-	image,
 	config,
 }: {
-	image?: { id: string; altText?: string | null }
 	config: FieldConfig<z.infer<typeof ImageFieldsetSchema>>
 }) {
 	// 🐨 the existingImage should now be based on whether fields.id.defaultValue is set
@@ -247,7 +331,7 @@ function ImageChooser({
 	const existingImage = Boolean(fields.id.defaultValue)
 
 	const [previewImage, setPreviewImage] = useState<string | null>(
-		existingImage ? `/resources/images/${fields.id.defaultValue}` : null,
+		fields.id.defaultValue ? getNoteImgSrc(fields.id.defaultValue) : null,
 	)
 	const [altText, setAltText] = useState(fields.altText.defaultValue ?? '')
 
