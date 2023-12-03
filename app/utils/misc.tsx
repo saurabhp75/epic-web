@@ -1,7 +1,7 @@
 import { useFormAction, useNavigation } from '@remix-run/react'
 import { type ClassValue, clsx } from 'clsx'
 import { useEffect, useMemo, useRef } from 'react'
-import { useSpinDelay } from 'spin-delay'
+// import { useSpinDelay } from 'spin-delay'
 import { twMerge } from 'tailwind-merge'
 import userFallback from '#app/assets/user.png'
 
@@ -152,20 +152,20 @@ export function useIsPending({
  * This avoids a flash of loading state regardless of how fast or slow the
  * request is.
  */
-export function useDelayedIsPending({
-	formAction,
-	formMethod,
-	delay = 400,
-	minDuration = 300,
-}: Parameters<typeof useIsPending>[0] &
-	Parameters<typeof useSpinDelay>[1] = {}) {
-	const isPending = useIsPending({ formAction, formMethod })
-	const delayedIsPending = useSpinDelay(isPending, {
-		delay,
-		minDuration,
-	})
-	return delayedIsPending
-}
+// export function useDelayedIsPending({
+// 	formAction,
+// 	formMethod,
+// 	delay = 400,
+// 	minDuration = 300,
+// }: Parameters<typeof useIsPending>[0] &
+// 	Parameters<typeof useSpinDelay>[1] = {}) {
+// 	const isPending = useIsPending({ formAction, formMethod })
+// 	const delayedIsPending = useSpinDelay(isPending, {
+// 		delay,
+// 		minDuration,
+// 	})
+// 	return delayedIsPending
+// }
 
 /**
  * Simple debounce implementation

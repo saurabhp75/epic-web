@@ -4,6 +4,16 @@ import { GeneralErrorBoundary } from '#app/components/error-boundary'
 import { SearchBar } from '#app/components/search-bar'
 import { prisma } from '#app/utils/db.server'
 import { cn, getUserImgSrc, useDelayedIsPending } from '#app/utils/misc'
+import { z } from 'zod'
+import { ErrorList } from '#app/components/forms'
+
+const UserSearchResultSchema = z.object({
+	id: z.string(),
+	username: z.string(),
+	name: z.string().nullable(),
+})
+
+const UserSearchResultsSchema = z.array(UserSearchResultSchema)
 
 export async function loader({ request }: DataFunctionArgs) {
 	const searchTerm = new URL(request.url).searchParams.get('search')
@@ -11,22 +21,37 @@ export async function loader({ request }: DataFunctionArgs) {
 		return redirect('/users')
 	}
 	const like = `%${searchTerm ?? ''}%`
-	const users = await prisma.$queryRaw`
-		SELECT id, username, name
+	const rawUsers = await prisma.$queryRaw`
+		SELECT id, username,  name
 		FROM User
 		WHERE username LIKE ${like}
 		OR name LIKE ${like}
 		LIMIT 50
 	`
-	return json({ status: 'idle', users } as const)
+
+	// 🐨 use your new schema to safely parse the rawUsers.
+	//   If there's an error, then return json with the error (result.error.message)
+	//   If there is not an error, then return json with the users
+	const result = UserSearchResultsSchema.safeParse(rawUsers)
+	if (!result.success) {
+		return json({ status: 'error', error: result.error.message } as const, {
+			status: 400,
+		})
+	}
+	return json({ status: 'idle', users: result.data } as const)
 }
 
 export default function UsersRoute() {
 	const data = useLoaderData<typeof loader>()
-	const isPending = useDelayedIsPending({
-		formMethod: 'GET',
-		formAction: '/users',
-	})
+	// const isPending = useDelayedIsPending({
+	// 	formMethod: 'GET',
+	// 	formAction: '/users',
+	// })
+
+	// 💰 uncomment this to log the full error to the console:
+	// if (data.status === 'error') {
+	// 	console.error(data.error)
+	// }
 
 	return (
 		<div className="container mb-48 mt-36 flex flex-col items-center justify-center gap-6">
@@ -36,15 +61,13 @@ export default function UsersRoute() {
 			</div>
 			<main>
 				{data.status === 'idle' ? (
-					// @ts-expect-error 🦺 we'll fix this next
 					data.users.length ? (
 						<ul
 							className={cn(
 								'flex w-full flex-wrap items-center justify-center gap-4 delay-200',
-								{ 'opacity-50': isPending },
+								// { 'opacity-50': isPending },
 							)}
 						>
-							{/* @ts-expect-error 🦺 we'll fix this next */}
 							{data.users.map(user => (
 								<li key={user.id}>
 									<Link
@@ -53,6 +76,7 @@ export default function UsersRoute() {
 									>
 										<img
 											alt={user.name ?? user.username}
+											// @ts-expect-error 🦺 we'll fix this next
 											src={getUserImgSrc(user.image?.id)}
 											className="h-16 w-16 rounded-full"
 										/>
@@ -71,6 +95,8 @@ export default function UsersRoute() {
 					) : (
 						<p>No users found</p>
 					)
+				) : data.status === 'error' ? (
+					<ErrorList errors={['There was an error parsing the results']} />
 				) : null}
 			</main>
 		</div>
