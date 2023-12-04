@@ -43,10 +43,10 @@ export async function loader({ request }: DataFunctionArgs) {
 
 export default function UsersRoute() {
 	const data = useLoaderData<typeof loader>()
-	// const isPending = useDelayedIsPending({
-	// 	formMethod: 'GET',
-	// 	formAction: '/users',
-	// })
+	const isPending = useDelayedIsPending({
+		formMethod: 'GET',
+		formAction: '/users',
+	})
 
 	// 💰 uncomment this to log the full error to the console:
 	// if (data.status === 'error') {
@@ -65,7 +65,7 @@ export default function UsersRoute() {
 						<ul
 							className={cn(
 								'flex w-full flex-wrap items-center justify-center gap-4 delay-200',
-								// { 'opacity-50': isPending },
+								{ 'opacity-50': isPending },
 							)}
 						>
 							{data.users.map(user => (
