@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useSpinDelay } from 'spin-delay'
 import { cn } from '#app/utils/misc'
 import { Button, type ButtonProps } from './button'
 import {
@@ -7,7 +8,6 @@ import {
 	TooltipTrigger,
 	TooltipContent,
 } from '@radix-ui/react-tooltip'
-// import useSpinDelay from 'spin-delay'
 import { Icon } from './icon.js'
 
 export const StatusButton = React.forwardRef<
@@ -15,25 +15,20 @@ export const StatusButton = React.forwardRef<
 	ButtonProps & {
 		status: 'pending' | 'success' | 'error' | 'idle'
 		message?: string | null
-		// spinDelay?: Parameters<typeof useSpinDelay>[1]
+		spinDelay?: Parameters<typeof useSpinDelay>[1]
 	}
 >(({ message, status, className, children, spinDelay, ...props }, ref) => {
-	// const delayedPending = useSpinDelay(status === 'pending', {
-	// 	delay: 400,
-	// 	minDuration: 300,
-	// 	...spinDelay,
-	// })
+	const delayedPending = useSpinDelay(status === 'pending', {
+		delay: 400,
+		minDuration: 300,
+		...spinDelay,
+	})
 	const companion = {
-		// pending: delayedPending ? (
-		// 	<div className="inline-flex h-6 w-6 items-center justify-center">
-		// 		<Icon name="update" className="animate-spin" />
-		// 	</div>
-		// ) : null,
-		pending: (
+		pending: delayedPending ? (
 			<div className="inline-flex h-6 w-6 items-center justify-center">
 				<Icon name="update" className="animate-spin" />
 			</div>
-		),
+		) : null,
 		success: (
 			<div className="inline-flex h-6 w-6 items-center justify-center">
 				<Icon name="check" />
