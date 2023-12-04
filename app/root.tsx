@@ -36,9 +36,12 @@ import { useForm } from '@conform-to/react'
 import { ErrorList } from './components/forms'
 import { Icon } from './components/ui/icon'
 import { Spacer } from './components/spacer'
+import { Toaster, toast as showToast } from 'sonner'
 import { z } from 'zod'
-import { invariantResponse } from './utils/misc'
+import { combineHeaders, invariantResponse } from './utils/misc'
 import { parse } from '@conform-to/zod'
+import { useEffect } from 'react'
+import { toastSessionStorage } from './utils/toast.server'
 
 // Commented out as it was just to demo Remix Bundling
 // import './styles/global.css'
@@ -75,20 +78,42 @@ export async function loader({ request }: DataFunctionArgs) {
 	// })
 
 	const honeyProps = honeypot.getInputProps()
-	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
 	// 🐨 get the csrfToken and csrfCookieHeader from csrf.commitToken
 	// 🐨 add the csrfToken to this object
 	// 🐨 add a 'set-cookie' header to the response with the csrfCookieHeader
+	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
+
+	// 🐨 get the cookie header from the request
+	// 🐨 get the toastCookieSession using the toastSessionStorage.getSession
+	// 🐨 get the 'toast' from the toastCookieSession
+	const toastCookieSession = await toastSessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	const toast = toastCookieSession.get('toast')
+	// 🐨 unset the toast from the session here
+	toastCookieSession.unset('toast')
 	return json(
 		{
-			username: os.userInfo().username, // 🐨 get the theme from the request's cookie header using the getTheme utility:
+			username: os.userInfo().username,
 			theme: getTheme(request),
+			toast,
 			ENV: getEnv(),
 			honeyProps,
 			csrfToken,
 		},
 		{
-			headers: csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : {},
+			// 🐨  "combineHeaders" combine 'set-cookie' headers for toast
+			// and csrf related cookies
+			headers: combineHeaders(
+				csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : null,
+				{
+					// commit the session change. we could also 
+					// use destroySession() without the need to unset the 
+					// toast cookie
+					'set-cookie':
+						await toastSessionStorage.commitSession(toastCookieSession),
+				},
+			),
 		},
 	)
 }
@@ -174,6 +199,7 @@ function App() {
 				</div>
 			</div>
 			<Spacer size="3xs" />
+			{data.toast ? <ShowToast toast={data.toast} /> : null}
 		</Document>
 	)
 }
@@ -238,6 +264,7 @@ function Document({
 						__html: `window.ENV = ${JSON.stringify(env)}`,
 					}}
 				/>
+				<Toaster closeButton position="top-center" />
 				<ScrollRestoration />
 				<Scripts />
 				<LiveReload />
@@ -289,6 +316,21 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 			<ErrorList errors={form.errors} id={form.errorId} />
 		</fetcher.Form>
 	)
+}
+
+function ShowToast({ toast }: { toast: any }) {
+	const { id, type, title, description } = toast as {
+		id: string
+		type: 'success' | 'message'
+		title: string
+		description: string
+	}
+	useEffect(() => {
+		setTimeout(() => {
+			showToast[type](title, { id, description })
+		}, 0)
+	}, [description, id, title, type])
+	return null
 }
 
 export function ErrorBoundary() {

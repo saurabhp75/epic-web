@@ -11,8 +11,8 @@ if (ENV.MODE === 'development') {
 startTransition(() => {
 	hydrateRoot(
 		document,
-		<StrictMode>
-			<RemixBrowser />
-		</StrictMode>,
+		// <StrictMode>
+		<RemixBrowser />,
+		// </StrictMode>,
 	)
 })
