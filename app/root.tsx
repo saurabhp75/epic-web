@@ -14,6 +14,7 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
+	useFetcher,
 	useLoaderData,
 	useMatches,
 } from '@remix-run/react'
@@ -29,7 +30,7 @@ import { csrf } from './utils/csrf.server'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 import { SearchBar } from './components/search-bar'
 import { Button } from './components/ui/button'
-import type { Theme } from './utils/theme.server'
+import { getTheme, setTheme, type Theme } from './utils/theme.server'
 import { useForm } from '@conform-to/react'
 import { ErrorList } from './components/forms'
 import { Icon } from './components/ui/icon'
@@ -78,7 +79,13 @@ export async function loader({ request }: DataFunctionArgs) {
 	// 🐨 add the csrfToken to this object
 	// 🐨 add a 'set-cookie' header to the response with the csrfCookieHeader
 	return json(
-		{ username: os.userInfo().username, ENV: getEnv(), honeyProps, csrfToken },
+		{
+			username: os.userInfo().username, // 🐨 get the theme from the request's cookie header using the getTheme utility:
+			theme: getTheme(request),
+			ENV: getEnv(),
+			honeyProps,
+			csrfToken,
+		},
 		{
 			headers: csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : {},
 		},
@@ -106,18 +113,27 @@ export async function action({ request }: DataFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
+	// 🐨 get the theme from the submission.value
+	// 🐨 get the value of the cookie header by calling setTheme with the theme
+	const { theme } = submission.value
+
 	// 🐨 Uncomment the console.log to test things out:
 	// console.log(submission.value)
 
-	// we'll do stuff with the submission next...
-
-	return json({ success: true, submission })
+	const responseInit = {
+		headers: {
+			// 🐨 add a 'set-cookie' header to this response and set it to the
+			// serialized cookie:
+			'set-cookie': setTheme(theme),
+		},
+	}
+	return json({ success: true, submission }, responseInit)
 }
 
 function App() {
 	// throw new Error('🐨 Loader error')
 	const data = useLoaderData<typeof loader>()
-	const theme = 'light' // we'll handle this later
+	const theme = data.theme
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 
@@ -209,11 +225,11 @@ function Document({
 }
 
 function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
-	// 🐨 create a fetcher. 💰 The generic will be <typeof action>
+	const fetcher = useFetcher<typeof action>()
 
 	const [form] = useForm({
 		id: 'theme-switch',
-		// 🐨 set the lastSubmission to fetcher.data?.submission
+		lastSubmission: fetcher.data?.submission,
 		onValidate({ formData }) {
 			return parse(formData, { schema: ThemeFormSchema })
 		},
@@ -221,6 +237,7 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 
 	const mode = userPreference ?? 'light'
 	// 🐨 set the nextMode to the opposite of the current mode
+	const nextMode = mode === 'light' ? 'dark' : 'light'
 	const modeLabel = {
 		light: (
 			<Icon name="sun">
@@ -235,12 +252,12 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 	}
 
 	return (
-		// 🐨 change this to a fetcher.Form and set the method as POST
-		<form {...form.props}>
-			{/* 🐨 add a hidden input for the theme and set its value to nextMode */}
+		<fetcher.Form method="POST" {...form.props}>
+			<input type="hidden" name="theme" value={nextMode} />
 			<div className="flex gap-2">
 				<button
-					// 🐨 set the name to "intent" and the value to "update-theme"
+					name="intent"
+					value="update-theme"
 					type="submit"
 					className="flex h-8 w-8 cursor-pointer items-center justify-center"
 				>
@@ -248,7 +265,7 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 				</button>
 			</div>
 			<ErrorList errors={form.errors} id={form.errorId} />
-		</form>
+		</fetcher.Form>
 	)
 }
 
