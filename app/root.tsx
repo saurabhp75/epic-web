@@ -91,7 +91,7 @@ export async function loader({ request }: DataFunctionArgs) {
 	)
 	const toast = toastCookieSession.get('toast')
 	// 🐨 unset the toast from the session here
-	toastCookieSession.unset('toast')
+	// toastCookieSession.unset('toast')
 	return json(
 		{
 			username: os.userInfo().username,
