@@ -3,6 +3,7 @@ import { faker } from '@faker-js/faker'
 import { PrismaClient } from '@prisma/client'
 import { promiseHash } from 'remix-utils/promise'
 import { UniqueEnforcer } from 'enforce-unique'
+import { createPassword } from '#tests/db-utils'
 
 const prisma = new PrismaClient()
 
@@ -116,12 +117,17 @@ async function seed() {
 	)
 
 	for (let index = 0; index < totalUsers; index++) {
+		const userData = createUser()
 		await prisma.user.create({
 			// 🐨 add a select to just get the ID so we're not pulling back the
 			// entire user object.
 			select: { id: true },
 			data: {
-				...createUser(),
+				...userData,
+				// 🐨 add a password here
+				// 💰 to make it easy to login as users, you can set the password to
+				// the username. Obviously this isn't secure, but this is test data 🤷‍♂️
+				password: { create: createPassword(userData.username) },
 				image: { create: userImages[index % 10] },
 				notes: {
 					create: Array.from({
@@ -189,6 +195,7 @@ async function seed() {
 			name: 'Kody',
 			// 🐨 add Kody's profile image here (💰 kodyImages.kodyUser)
 			image: { create: kodyImages.kodyUser },
+			password: { create: createPassword('kodylovesyou') },
 			notes: {
 				create: [
 					{
