@@ -45,6 +45,7 @@ import type { Toast } from './utils/toast.server'
 import { getToast } from './utils/toast.server'
 import { prisma } from './utils/db.server'
 import { sessionStorage } from './utils/session.server'
+import { useOptionalUser } from './utils/user'
 
 // Commented out as it was just to demo Remix Bundling
 // import './styles/global.css'
@@ -178,7 +179,7 @@ function App() {
 	// throw new Error('🐨 Loader error')
 	const data = useLoaderData<typeof loader>()
 	const theme = useTheme()
-	const user = data.user
+	const user = useOptionalUser()
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 
