@@ -10,14 +10,16 @@ import { Form, Link, useActionData } from '@remix-run/react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
 import { z } from 'zod'
-import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
-import { ErrorList, Field } from '#app/components/forms.tsx'
-import { Spacer } from '#app/components/spacer.tsx'
-import { StatusButton } from '#app/components/ui/status-button.tsx'
-import { validateCSRF } from '#app/utils/csrf.server.ts'
-import { checkHoneypot } from '#app/utils/honeypot.server.ts'
-import { useIsPending } from '#app/utils/misc.tsx'
-import { PasswordSchema, UsernameSchema } from '#app/utils/user-validation.ts'
+import { GeneralErrorBoundary } from '#app/components/error-boundary'
+import { ErrorList, Field } from '#app/components/forms'
+import { Spacer } from '#app/components/spacer'
+import { StatusButton } from '#app/components/ui/status-button'
+import { validateCSRF } from '#app/utils/csrf.server'
+import { checkHoneypot } from '#app/utils/honeypot.server'
+import { useIsPending } from '#app/utils/misc'
+import { PasswordSchema, UsernameSchema } from '#app/utils/user-validation'
+import { prisma } from '#app/utils/db.server'
+import { sessionStorage } from '#app/utils/session.server'
 
 const LoginFormSchema = z.object({
 	username: UsernameSchema,
@@ -29,7 +31,27 @@ export async function action({ request }: DataFunctionArgs) {
 	await validateCSRF(formData, request.headers)
 	checkHoneypot(formData)
 	const submission = await parse(formData, {
-		schema: LoginFormSchema,
+		schema: intent =>
+			LoginFormSchema.transform(async (data, ctx) => {
+				if (intent !== 'submit') return { ...data, user: null }
+				// 🐨 find the user in the database by their username
+
+				const user = await prisma.user.findUnique({
+					select: { id: true },
+					where: { username: data.username },
+				})
+				// 🐨 if there's no user by that username then add an issue to the context
+				// and return z.NEVER
+				// 📜 https://zod.dev/?id=validating-during-transform
+				if (!user) {
+					ctx.addIssue({
+						code: 'custom',
+						message: 'Invalid username or password',
+					})
+					return z.NEVER
+				}
+				return { ...data, user }
+			}),
 		async: true,
 	})
 	// get the password off the payload that's sent back
@@ -40,11 +62,30 @@ export async function action({ request }: DataFunctionArgs) {
 		delete submission.value?.password
 		return json({ status: 'idle', submission } as const)
 	}
-	if (!submission.value) {
+
+	if (!submission.value?.user) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	return redirect('/')
+	// 🐨 get the user from the submission.value
+	const { user } = submission.value
+
+	// request's cookie header 💰 request.headers.get('cookie')
+	// 🐨 use the getSession utility to get the session value from the
+	const cookieSession = await sessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+
+	// 🐨 set the 'userId' in the session to the user.id
+	cookieSession.set('userId', user.id)
+
+	// 🐨 update this redirect to add a 'set-cookie' header to the result of
+	// commitSession with the session value you're working with
+	return redirect('/', {
+		headers: {
+			'set-cookie': await sessionStorage.commitSession(cookieSession),
+		},
+	})
 }
 
 export default function LoginPage() {

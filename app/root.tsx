@@ -38,10 +38,12 @@ import { Icon } from './components/ui/icon'
 import { Spacer } from './components/spacer'
 import { Toaster, toast as showToast } from 'sonner'
 import { z } from 'zod'
-import { combineHeaders, invariantResponse } from './utils/misc'
+import { combineHeaders, getUserImgSrc, invariantResponse } from './utils/misc'
 import { parse } from '@conform-to/zod'
 import { useEffect } from 'react'
-import { toastSessionStorage } from './utils/toast.server'
+import { getToast } from './utils/toast.server'
+import { prisma } from './utils/db.server'
+import { sessionStorage } from './utils/session.server'
 
 // Commented out as it was just to demo Remix Bundling
 // import './styles/global.css'
@@ -83,18 +85,39 @@ export async function loader({ request }: DataFunctionArgs) {
 	// 🐨 add a 'set-cookie' header to the response with the csrfCookieHeader
 	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
 
-	// 🐨 get the cookie header from the request
 	// 🐨 get the toastCookieSession using the toastSessionStorage.getSession
 	// 🐨 get the 'toast' from the toastCookieSession
-	const toastCookieSession = await toastSessionStorage.getSession(
+	const { toast, headers: toastHeaders } = await getToast(request)
+
+	// 🐨 get the cookie header from the request
+	const cookieSession = await sessionStorage.getSession(
 		request.headers.get('cookie'),
 	)
-	const toast = toastCookieSession.get('toast')
-	// 🐨 unset the toast from the session here
-	// toastCookieSession.unset('toast')
+
+	// 🐨 get the userId from the cookie session
+	const userId = cookieSession.get('userId')
+
+	// 🐨 if there's a userId, then get the user from the database
+	// 💰 you will want to specify a select. You'll need the id, username, name,
+	// and image's id
+	const user = userId
+		? await prisma.user.findUnique({
+				select: {
+					id: true,
+					name: true,
+					username: true,
+					image: { select: { id: true } },
+				},
+				where: { id: userId },
+		  })
+		: null
+
 	return json(
 		{
 			username: os.userInfo().username,
+			// 🐨 add the user here (if there was no userId then the user can be null)
+			// 💰 don't forget to update the component below to access the user from the data.
+			user,
 			theme: getTheme(request),
 			toast,
 			ENV: getEnv(),
@@ -106,13 +129,7 @@ export async function loader({ request }: DataFunctionArgs) {
 			// and csrf related cookies
 			headers: combineHeaders(
 				csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : null,
-				{
-					// commit the session change. we could also 
-					// use destroySession() without the need to unset the 
-					// toast cookie
-					'set-cookie':
-						await toastSessionStorage.commitSession(toastCookieSession),
-				},
+				toastHeaders,
 			),
 		},
 	)
@@ -160,6 +177,7 @@ function App() {
 	// throw new Error('🐨 Loader error')
 	const data = useLoaderData<typeof loader>()
 	const theme = useTheme()
+	const user = data.user
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 
@@ -177,9 +195,29 @@ function App() {
 						</div>
 					)}
 					<div className="flex items-center gap-10">
-						<Button asChild variant="default" size="sm">
-							<Link to="/login">Log In</Link>
-						</Button>
+						{user ? (
+							<div className="flex items-center gap-2">
+								<Button asChild variant="secondary">
+									<Link
+										to={`/users/${user.username}`}
+										className="flex items-center gap-2"
+									>
+										<img
+											className="h-8 w-8 rounded-full object-cover"
+											alt={user.name ?? user.username}
+											src={getUserImgSrc(user.image?.id)}
+										/>
+										<span className="hidden text-body-sm font-bold sm:block">
+											{user.name ?? user.username}
+										</span>
+									</Link>
+								</Button>
+							</div>
+						) : (
+							<Button asChild variant="default" size="sm">
+								<Link to="/login">Log In</Link>
+							</Button>
+						)}
 					</div>
 				</nav>
 			</header>
