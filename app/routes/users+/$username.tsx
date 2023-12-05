@@ -7,6 +7,7 @@ import { Button } from '#app/components/ui/button'
 import { Spacer } from '#app/components/spacer'
 import { useOptionalUser } from '#app/utils/user'
 import { Icon } from '#app/components/ui/icon'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 export async function loader({ params }: DataFunctionArgs) {
 	// Below error will be caught by error boundary
@@ -80,7 +81,8 @@ export default function ProfileRoute() {
 						Joined {data.userJoinedDisplay}
 					</p>
 					{isLoggedInUser ? (
-						<Form className="mt-3">
+						<Form action="/logout" method="POST" className="mt-3">
+							<AuthenticityTokenInput />
 							<Button type="submit" variant="link" size="pill">
 								<Icon name="exit" className="scale-125 max-md:scale-150">
 									Logout
@@ -100,7 +102,6 @@ export default function ProfileRoute() {
 		</div>
 	)
 }
-
 
 export const meta: MetaFunction<typeof loader> = ({ data, params }) => {
 	const displayName = data?.user.name ?? params.username
