@@ -18,7 +18,7 @@ import {
 import { prisma } from '#app/utils/db.server'
 import { z } from 'zod'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
-import { bcrypt } from '#app/utils/auth.server'
+import { bcrypt, getSessionExpirationDate } from '#app/utils/auth.server'
 import { Spacer } from '#app/components/spacer'
 import { useIsPending } from '#app/utils/misc'
 import { conform, useForm } from '@conform-to/react'
@@ -37,6 +37,7 @@ const SignupFormSchema = z
 			required_error:
 				'You must agree to the terms of service and privacy policy',
 		}),
+		remember: z.boolean().optional(),
 	})
 	.superRefine(({ confirmPassword, password }, ctx) => {
 		if (confirmPassword !== password) {
@@ -98,7 +99,7 @@ export async function action({ request }: DataFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { user } = submission.value
+	const { user, remember } = submission.value
 
 	const cookieSession = await sessionStorage.getSession(
 		request.headers.get('cookie'),
@@ -107,7 +108,12 @@ export async function action({ request }: DataFunctionArgs) {
 
 	return redirect('/', {
 		headers: {
-			'set-cookie': await sessionStorage.commitSession(cookieSession),
+			// 🐨 add an expires option to this commitSession call and set it to
+			// a date 30 days in the future if they checked the remember checkbox
+			// or undefined if they did not.
+			'set-cookie': await sessionStorage.commitSession(cookieSession, {
+				expires: remember ? getSessionExpirationDate() : undefined,
+			}),
 		},
 	})
 }
@@ -208,6 +214,15 @@ export default function SignupRoute() {
 							{ type: 'checkbox' },
 						)}
 						errors={fields.agreeToTermsOfServiceAndPrivacyPolicy.errors}
+					/>
+
+					<CheckboxField
+						labelProps={{
+							htmlFor: fields.remember.id,
+							children: 'Remember me',
+						}}
+						buttonProps={conform.input(fields.remember, { type: 'checkbox' })}
+						errors={fields.remember.errors}
 					/>
 
 					<ErrorList errors={form.errors} id={form.errorId} />

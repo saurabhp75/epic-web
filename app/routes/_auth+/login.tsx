@@ -11,7 +11,7 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
-import { ErrorList, Field } from '#app/components/forms'
+import { CheckboxField, ErrorList, Field } from '#app/components/forms'
 import { Spacer } from '#app/components/spacer'
 import { StatusButton } from '#app/components/ui/status-button'
 import { validateCSRF } from '#app/utils/csrf.server'
@@ -20,11 +20,12 @@ import { useIsPending } from '#app/utils/misc'
 import { PasswordSchema, UsernameSchema } from '#app/utils/user-validation'
 import { prisma } from '#app/utils/db.server'
 import { sessionStorage } from '#app/utils/session.server'
-import { bcrypt } from '#app/utils/auth.server'
+import { bcrypt, getSessionExpirationDate } from '#app/utils/auth.server'
 
 const LoginFormSchema = z.object({
 	username: UsernameSchema,
 	password: PasswordSchema,
+	remember: z.boolean().optional(),
 })
 
 export async function action({ request }: DataFunctionArgs) {
@@ -86,7 +87,7 @@ export async function action({ request }: DataFunctionArgs) {
 	}
 
 	// 🐨 get the user from the submission.value
-	const { user } = submission.value
+	const { user, remember } = submission.value
 
 	// request's cookie header 💰 request.headers.get('cookie')
 	// 🐨 use the getSession utility to get the session value from the
@@ -101,7 +102,12 @@ export async function action({ request }: DataFunctionArgs) {
 	// commitSession with the session value you're working with
 	return redirect('/', {
 		headers: {
-			'set-cookie': await sessionStorage.commitSession(cookieSession),
+			// 🐨 add an expires option to this commitSession call and set it to
+			// a date 30 days in the future if they checked the remember checkbox
+			// or undefined if they did not.
+			'set-cookie': await sessionStorage.commitSession(cookieSession, {
+				expires: remember ? getSessionExpirationDate() : undefined,
+			}),
 		},
 	})
 }
@@ -155,7 +161,16 @@ export default function LoginPage() {
 							/>
 
 							<div className="flex justify-between">
-								<div />
+								<CheckboxField
+									labelProps={{
+										htmlFor: fields.remember.id,
+										children: 'Remember me',
+									}}
+									buttonProps={conform.input(fields.remember, {
+										type: 'checkbox',
+									})}
+									errors={fields.remember.errors}
+								/>
 								<div>
 									<Link
 										to="/forgot-password"
