@@ -41,6 +41,7 @@ import { z } from 'zod'
 import { combineHeaders, getUserImgSrc, invariantResponse } from './utils/misc'
 import { parse } from '@conform-to/zod'
 import { useEffect } from 'react'
+import type { Toast } from './utils/toast.server'
 import { getToast } from './utils/toast.server'
 import { prisma } from './utils/db.server'
 import { sessionStorage } from './utils/session.server'
@@ -252,7 +253,7 @@ function useTheme() {
 	const data = useLoaderData<typeof loader>()
 	const fetchers = useFetchers()
 	const themeFetcher = fetchers.find(
-		fetcher => fetcher.formData?.get('intent') === 'update-theme',
+		f => f.formData?.get('intent') === 'update-theme',
 	)
 	// Get the value submitted by the user
 	const optimisticTheme = themeFetcher?.formData?.get('theme')
@@ -356,13 +357,8 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 	)
 }
 
-function ShowToast({ toast }: { toast: any }) {
-	const { id, type, title, description } = toast as {
-		id: string
-		type: 'success' | 'message'
-		title: string
-		description: string
-	}
+function ShowToast({ toast }: { toast: Toast }) {
+	const { id, type, title, description } = toast
 	useEffect(() => {
 		setTimeout(() => {
 			showToast[type](title, { id, description })
