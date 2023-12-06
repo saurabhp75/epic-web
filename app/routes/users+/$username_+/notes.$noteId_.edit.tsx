@@ -34,10 +34,16 @@ import {
 import { useRef, useState } from 'react'
 import { validateCSRF } from '#app/utils/csrf.server'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
+import { requireUser } from '#app/utils/auth.server'
 
 export async function loader({ params }: DataFunctionArgs) {
+	export async function loader({ params, request }: DataFunctionArgs) {
+	const user = await requireUser(request)
+	invariantResponse(user.username === params.username, 'Not authorized', {
+		status: 403,
+	})
 	const note = await prisma.note.findFirst({
-		where: { id: params.noteId },
+		where: { id: params.noteId, ownerId: user.id },
 		select: {
 			title: true,
 			content: true,

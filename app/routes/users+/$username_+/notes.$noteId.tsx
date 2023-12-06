@@ -22,6 +22,7 @@ import { StatusButton } from '#app/components/ui/status-button'
 import { Icon } from '#app/components/ui/icon'
 import { ErrorList } from '#app/components/forms'
 import { useOptionalUser } from '#app/utils/user'
+import { requireUser } from '#app/utils/auth.server'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = await prisma.note.findUnique({
@@ -58,6 +59,11 @@ const DeleteFormSchema = z.object({
 })
 
 export async function action({ request, params }: DataFunctionArgs) {
+	const user = await requireUser(request)
+	invariantResponse(user.username === params.username, 'Not authorized', {
+		status: 403,
+	})
+
 	const formData = await request.formData()
 
 	// 🐨 validate the token here
@@ -78,7 +84,7 @@ export async function action({ request, params }: DataFunctionArgs) {
 
 	const note = await prisma.note.findFirst({
 		select: { id: true, owner: { select: { username: true } } },
-		where: { id: noteId, owner: { username: params.username } },
+		where: { id: noteId, ownerId: user.id },
 	})
 	invariantResponse(note, 'Not found', { status: 404 })
 	await prisma.note.delete({ where: { id: params.noteId } })

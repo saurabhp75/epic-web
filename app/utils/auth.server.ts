@@ -126,6 +126,23 @@ export async function verifyUserPassword(
 	return { id: userWithPassword.id }
 }
 
+// If the user doesn't exist, log the user out with the logout utility.
+// TypeScript is happiest when you do: "throw await logout({ request })"
+// If the user does exist, then return the user.
+export async function requireUser(request: Request) {
+	const userId = await requireUserId(request)
+	const user = await prisma.user.findUnique({
+		select: { id: true, username: true },
+		where: { id: userId },
+	})
+	if (!user) {
+		// user found in cookie but not
+		// in db, so logout
+		throw await logout({ request })
+	}
+	return user
+}
+
 // get the user's Id from the session using getUserId
 // if there's a userId, then throw a redirect to '/' (otherwise do nothing)
 export async function requireAnonymous(request: Request) {
