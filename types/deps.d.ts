@@ -7,7 +7,7 @@ declare module 'thirty-two' {
 }
 
 declare module 'tailwindcss-animate' {
-	declare const _default: {
+	const _default: {
 		handler: () => void
 	}
 	export = _default
