@@ -22,6 +22,7 @@ import { sessionStorage } from '#app/utils/session.server'
 import {
 	getSessionExpirationDate,
 	login,
+	requireAnonymous,
 	userIdKey,
 } from '#app/utils/auth.server'
 
@@ -31,7 +32,13 @@ const LoginFormSchema = z.object({
 	remember: z.boolean().optional(),
 })
 
+export async function loader({ request }: DataFunctionArgs) {
+	await requireAnonymous(request)
+	return json({})
+}
+
 export async function action({ request }: DataFunctionArgs) {
+	await requireAnonymous(request)
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	checkHoneypot(formData)

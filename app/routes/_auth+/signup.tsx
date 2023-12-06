@@ -20,6 +20,7 @@ import { z } from 'zod'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
 import {
 	getSessionExpirationDate,
+	requireAnonymous,
 	signup,
 	userIdKey,
 } from '#app/utils/auth.server'
@@ -29,6 +30,11 @@ import { conform, useForm } from '@conform-to/react'
 import { CheckboxField, ErrorList, Field } from '#app/components/forms'
 import { StatusButton } from '#app/components/ui/status-button'
 import { sessionStorage } from '#app/utils/session.server'
+
+export async function loader({ request }: DataFunctionArgs) {
+	await requireAnonymous(request)
+	return json({})
+}
 
 const SignupFormSchema = z
 	.object({
@@ -54,6 +60,7 @@ const SignupFormSchema = z
 	})
 
 export async function action({ request }: DataFunctionArgs) {
+	await requireAnonymous(request)
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	// 🐨 throw a 400 response if the name field is filled out

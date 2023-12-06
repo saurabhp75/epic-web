@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from './db.server'
 import { combineResponseInits } from './misc'
 import { safeRedirect } from 'remix-utils/safe-redirect'
+import { sessionStorage } from './session.server'
 
 export { bcrypt }
 
@@ -123,4 +124,13 @@ export async function verifyUserPassword(
 	}
 
 	return { id: userWithPassword.id }
+}
+
+// get the user's Id from the session using getUserId
+// if there's a userId, then throw a redirect to '/' (otherwise do nothing)
+export async function requireAnonymous(request: Request) {
+	const userId = await getUserId(request)
+	if (userId) {
+		throw redirect('/')
+	}
 }
