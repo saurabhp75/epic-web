@@ -6,13 +6,14 @@ import { Icon } from '#app/components/ui/icon'
 import { prisma } from '#app/utils/db.server'
 import { cn, invariantResponse } from '#app/utils/misc'
 import { useUser } from '#app/utils/user'
+import { requireUserId } from '#app/utils/auth.server'
 
 export const handle = {
 	breadcrumb: <Icon name="file-text">Edit Profile</Icon>,
 }
 
 export async function loader({ request }: DataFunctionArgs) {
-	const userId = 'some_user_id' // we'll take care of this next
+	const userId = await requireUserId(request)
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: { username: true },

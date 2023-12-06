@@ -20,6 +20,7 @@ import {
 	NameSchema,
 	UsernameSchema,
 } from '#app/utils/user-validation'
+import { requireUserId } from '#app/utils/auth.server'
 
 const ProfileFormSchema = z.object({
 	name: NameSchema.optional(),
@@ -28,7 +29,7 @@ const ProfileFormSchema = z.object({
 })
 
 export async function loader({ request }: DataFunctionArgs) {
-	const userId = 'some_user_id' // we'll take care of this next
+	const userId = await requireUserId(request)
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
@@ -56,7 +57,7 @@ const profileUpdateActionIntent = 'update-profile'
 const deleteDataActionIntent = 'delete-data'
 
 export async function action({ request }: DataFunctionArgs) {
-	const userId = 'some_user_id' // we'll take care of this next
+	const userId = await requireUserId(request)
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	const intent = formData.get('intent')

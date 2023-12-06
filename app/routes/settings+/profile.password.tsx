@@ -8,7 +8,11 @@ import { ErrorList, Field } from '#app/components/forms'
 import { Button } from '#app/components/ui/button'
 import { Icon } from '#app/components/ui/icon'
 import { StatusButton } from '#app/components/ui/status-button'
-import { getPasswordHash, verifyUserPassword } from '#app/utils/auth.server'
+import {
+	getPasswordHash,
+	requireUserId,
+	verifyUserPassword,
+} from '#app/utils/auth.server'
 import { validateCSRF } from '#app/utils/csrf.server'
 import { prisma } from '#app/utils/db.server'
 import { useIsPending } from '#app/utils/misc'
@@ -35,7 +39,7 @@ const ChangePasswordForm = z
 	})
 
 export async function action({ request }: DataFunctionArgs) {
-	const userId = 'some_user_id' // we'll take care of this next
+	const userId = await requireUserId(request)
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	const submission = await parse(formData, {

@@ -24,6 +24,8 @@ import {
 	useDoubleCheck,
 	useIsPending,
 } from '#app/utils/misc'
+import { requireUserId } from '#app/utils/auth.server'
+import { request } from 'express'
 
 export const handle = {
 	breadcrumb: <Icon name="avatar">Photo</Icon>,
@@ -38,8 +40,8 @@ const PhotoFormSchema = z.object({
 		.refine(file => file.size <= MAX_SIZE, 'Image size must be less than 3MB'),
 })
 
-export async function loader() {
-	const userId = 'some_user_id' // we'll take care of this next
+export async function loader({ request }: DataFunctionArgs) {
+	const userId = await requireUserId(request)
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
@@ -54,7 +56,7 @@ export async function loader() {
 }
 
 export async function action({ request }: DataFunctionArgs) {
-	const userId = 'some_user_id' // we'll take care of this next
+	const userId = await requireUserId(request)
 	const formData = await unstable_parseMultipartFormData(
 		request,
 		unstable_createMemoryUploadHandler({ maxPartSize: MAX_SIZE }),
