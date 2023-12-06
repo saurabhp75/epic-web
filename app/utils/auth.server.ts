@@ -154,10 +154,29 @@ export async function requireAnonymous(request: Request) {
 
 // returns the userId if it exists and throws a redirect to the login page
 // if no userId exists in the session.
-export async function requireUserId(request: Request) {
+export async function requireUserId(
+	request: Request,
+	{ redirectTo }: { redirectTo?: string | null } = {},
+) {
 	const userId = await getUserId(request)
 	if (!userId) {
-		throw redirect('/login')
+		// 🐨 create a URL object with new URL(request.url)
+		// 🐨 if redirectTo was passed as an argument we'll just use that, otherwise
+		// 🐨 create the path to redirectTo by combining the url's pathname and search
+		// 🐨 construct the login redirect path so it ends up being something like
+		// this: '/login?redirectTo=/protected/path'
+		// 💯 don't include the redirectTo if it's null
+		// 🐨 update this redirect to use your loginRedirect
+		const requestUrl = new URL(request.url)
+		redirectTo =
+			redirectTo === null
+				? null
+				: redirectTo ?? `${requestUrl.pathname}${requestUrl.search}`
+		const loginParams = redirectTo ? new URLSearchParams({ redirectTo }) : null
+		const loginRedirect = ['/login', loginParams?.toString()]
+			.filter(Boolean)
+			.join('?')
+		throw redirect(loginRedirect)
 	}
 	return userId
 }

@@ -6,7 +6,7 @@ import {
 	type DataFunctionArgs,
 	type MetaFunction,
 } from '@remix-run/node'
-import { Form, Link, useActionData } from '@remix-run/react'
+import { Form, Link, useActionData, useSearchParams } from '@remix-run/react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
 import { z } from 'zod'
@@ -25,10 +25,12 @@ import {
 	requireAnonymous,
 	userIdKey,
 } from '#app/utils/auth.server'
+import { safeRedirect } from 'remix-utils/safe-redirect'
 
 const LoginFormSchema = z.object({
 	username: UsernameSchema,
 	password: PasswordSchema,
+	redirectTo: z.string().optional(),
 	remember: z.boolean().optional(),
 })
 
@@ -75,7 +77,7 @@ export async function action({ request }: DataFunctionArgs) {
 	}
 
 	// 🐨 get the user from the submission.value
-	const { user, remember } = submission.value
+	const { user, remember, redirectTo } = submission.value
 
 	// request's cookie header 💰 request.headers.get('cookie')
 	// 🐨 use the getSession utility to get the session value from the
@@ -88,7 +90,7 @@ export async function action({ request }: DataFunctionArgs) {
 
 	// 🐨 update this redirect to add a 'set-cookie' header to the result of
 	// commitSession with the session value you're working with
-	return redirect('/', {
+	return redirect(safeRedirect(redirectTo), {
 		headers: {
 			// 🐨 add an expires option to this commitSession call and set it to
 			// a date 30 days in the future if they checked the remember checkbox
@@ -104,9 +106,13 @@ export default function LoginPage() {
 	const actionData = useActionData<typeof action>()
 	const isPending = useIsPending()
 
+	const [searchParams] = useSearchParams()
+	const redirectTo = searchParams.get('redirectTo')
+
 	const [form, fields] = useForm({
 		id: 'login-form',
 		constraint: getFieldsetConstraint(LoginFormSchema),
+		defaultValue: { redirectTo },
 		lastSubmission: actionData?.submission,
 		onValidate({ formData }) {
 			return parse(formData, { schema: LoginFormSchema })
@@ -169,6 +175,10 @@ export default function LoginPage() {
 								</div>
 							</div>
 
+							<input
+								{...conform.input(fields.redirectTo, { type: 'hidden' })}
+							/>
+
 							<ErrorList errors={form.errors} id={form.errorId} />
 
 							<div className="flex items-center justify-between gap-6 pt-3">
@@ -184,7 +194,15 @@ export default function LoginPage() {
 						</Form>
 						<div className="flex items-center justify-center gap-2 pt-6">
 							<span className="text-muted-foreground">New here?</span>
-							<Link to="/signup">Create an account</Link>
+							<Link
+								to={
+									redirectTo
+										? `/signup?${encodeURIComponent(redirectTo)}`
+										: '/signup'
+								}
+							>
+								Create an account
+							</Link>
 						</div>
 					</div>
 				</div>
