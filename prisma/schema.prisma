@@ -54,6 +54,7 @@ model User {
   password Password?
   notes    Note[]
   roles    Role[]
+  sessions Session[]
 }
 
 model Note {
@@ -115,6 +116,28 @@ model Password {
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId String @unique
+}
+
+// 🐨 add a model for the user's sessions
+// id - like usual
+// expirationDate - a required DateTime
+// createdAt - like usual
+// updatedAt - like usual
+// user - a required relation to the User model with onDelete and onUpdate set to Cascade
+// userId - a required string (but not unique, because there can be many of these per user)
+// 🐨 because the userId is a foreign key but it's not unique, add an index for that too.
+model Session {
+  id             String   @id @default(cuid())
+  expirationDate DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId String
+
+  // non-unique foreign key
+  @@index([userId])
 }
 
 // 🐨 add a Permission model that has the following properties:
