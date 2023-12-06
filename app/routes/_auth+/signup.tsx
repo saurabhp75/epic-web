@@ -18,7 +18,11 @@ import {
 import { prisma } from '#app/utils/db.server'
 import { z } from 'zod'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
-import { bcrypt, getSessionExpirationDate } from '#app/utils/auth.server'
+import {
+	getSessionExpirationDate,
+	signup,
+	userIdKey,
+} from '#app/utils/auth.server'
 import { Spacer } from '#app/components/spacer'
 import { useIsPending } from '#app/utils/misc'
 import { conform, useForm } from '@conform-to/react'
@@ -69,24 +73,7 @@ export async function action({ request }: DataFunctionArgs) {
 				return
 			}
 		}).transform(async data => {
-			// 🐨 retrieve the password they entered from data here as well
-			const { username, email, name, password } = data
-
-			const user = await prisma.user.create({
-				select: { id: true },
-				data: {
-					email: email.toLowerCase(),
-					username: username.toLowerCase(),
-					name,
-					// 🐨 create a password here using bcrypt.hash (the async version)
-					password: {
-						create: {
-							hash: await bcrypt.hash(password, 10),
-						},
-					},
-				},
-			})
-
+			const user = await signup(data)
 			return { ...data, user }
 		}),
 		async: true,
@@ -104,7 +91,7 @@ export async function action({ request }: DataFunctionArgs) {
 	const cookieSession = await sessionStorage.getSession(
 		request.headers.get('cookie'),
 	)
-	cookieSession.set('userId', user.id)
+	cookieSession.set(userIdKey, user.id)
 
 	return redirect('/', {
 		headers: {

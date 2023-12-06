@@ -1,5 +1,5 @@
 import { type DataFunctionArgs, redirect } from '@remix-run/node'
-import { sessionStorage } from '#app/utils/session.server'
+import { logout } from '#app/utils/auth.server'
 
 export async function loader() {
 	// 🦉 we'll keep this around in case the user ends up on this route. They
@@ -9,17 +9,5 @@ export async function loader() {
 }
 
 export async function action({ request }: DataFunctionArgs) {
-	// 🐨 get the user's session from the request that's passed to the action
-	// 🐨 destroy the session and set the 'set-cookie' header
-
-	// We can use getSession() without param here is we just
-	// want to destroy the session.
-	const cookieSession = await sessionStorage.getSession(
-		request.headers.get('cookie'),
-	)
-	return redirect('/', {
-		headers: {
-			'set-cookie': await sessionStorage.destroySession(cookieSession),
-		},
-	})
+	throw await logout({ request })
 }

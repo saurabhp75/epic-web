@@ -8,7 +8,7 @@ import {
 	redirect,
 } from '@remix-run/node'
 import {
-	Form,
+	// Form,
 	Link,
 	Links,
 	LiveReload,
@@ -19,9 +19,9 @@ import {
 	useFetcher,
 	useFetchers,
 	useLoaderData,
-	useLocation,
+	// useLocation,
 	useMatches,
-	useSubmit,
+	// useSubmit,
 } from '@remix-run/react'
 
 import faviconAssetUrl from './assets/favicon.svg'
@@ -44,23 +44,23 @@ import { Toaster, toast as showToast } from 'sonner'
 import { z } from 'zod'
 import { combineHeaders, getUserImgSrc, invariantResponse } from './utils/misc'
 import { parse } from '@conform-to/zod'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
 import type { Toast } from './utils/toast.server'
 import { getToast } from './utils/toast.server'
 import { prisma } from './utils/db.server'
 import { sessionStorage } from './utils/session.server'
 import { useOptionalUser } from './utils/user'
 
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from './components/ui/alert-dialog'
+// import {
+// 	AlertDialog,
+// 	AlertDialogAction,
+// 	AlertDialogCancel,
+// 	AlertDialogContent,
+// 	AlertDialogDescription,
+// 	AlertDialogFooter,
+// 	AlertDialogHeader,
+// 	AlertDialogTitle,
+// } from './components/ui/alert-dialog'
 
 // Commented out as it was just to demo Remix Bundling
 // import './styles/global.css'
@@ -211,7 +211,7 @@ function App() {
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 
 	return (
-		<Document isLoggedIn={Boolean(user)} theme={theme} env={data.ENV}>
+		<Document theme={theme} env={data.ENV}>
 			<header className="container px-6 py-4 sm:px-8 sm:py-6">
 				<nav className="flex items-center justify-between gap-4 sm:gap-6">
 					<Link to="/">
@@ -307,12 +307,12 @@ function Document({
 	children,
 	theme,
 	env,
-	isLoggedIn = false,
-}: {
+} // isLoggedIn = false,
+: {
 	children: React.ReactNode
 	theme?: Theme
 	env?: Record<string, string>
-	isLoggedIn?: boolean
+	// isLoggedIn?: boolean
 }) {
 	return (
 		<html lang="en" className={`${theme} h-full overflow-x-hidden`}>
@@ -333,7 +333,7 @@ function Document({
 						__html: `window.ENV = ${JSON.stringify(env)}`,
 					}}
 				/>
-				{isLoggedIn ? <LogoutTimer /> : null}
+				{/* {isLoggedIn ? <LogoutTimer /> : null} */}
 				<Toaster closeButton position="top-center" />
 				<ScrollRestoration />
 				<Scripts />
@@ -388,6 +388,7 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 	)
 }
 
+/* // Disable autologout for now
 // 💣 you can remove this eslint line once you've rendered the LogoutTimer
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function LogoutTimer() {
@@ -460,6 +461,7 @@ function LogoutTimer() {
 		</AlertDialog>
 	)
 }
+*/
 
 function ShowToast({ toast }: { toast: Toast }) {
 	const { id, type, title, description } = toast

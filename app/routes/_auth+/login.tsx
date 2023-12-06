@@ -18,9 +18,12 @@ import { validateCSRF } from '#app/utils/csrf.server'
 import { checkHoneypot } from '#app/utils/honeypot.server'
 import { useIsPending } from '#app/utils/misc'
 import { PasswordSchema, UsernameSchema } from '#app/utils/user-validation'
-import { prisma } from '#app/utils/db.server'
 import { sessionStorage } from '#app/utils/session.server'
-import { bcrypt, getSessionExpirationDate } from '#app/utils/auth.server'
+import {
+	getSessionExpirationDate,
+	login,
+	userIdKey,
+} from '#app/utils/auth.server'
 
 const LoginFormSchema = z.object({
 	username: UsernameSchema,
@@ -38,30 +41,8 @@ export async function action({ request }: DataFunctionArgs) {
 				if (intent !== 'submit') return { ...data, user: null }
 				// 🐨 find the user in the database by their username
 
-				const userWithPassword = await prisma.user.findUnique({
-					// 🐨 include the password hash in this select
-					select: { id: true, password: { select: { hash: true } } },
-					where: { username: data.username },
-				})
-				// 🐨 if there's no user by that username then add an issue to the context
-				// and return z.NEVER
-				// 📜 https://zod.dev/?id=validating-during-transform
-				if (!userWithPassword || !userWithPassword.password) {
-					ctx.addIssue({
-						code: 'custom',
-						message: 'Invalid username or password',
-					})
-					return z.NEVER
-				}
-
-				// 🐨 use bcrypt.compare to compare the provided password with the hash
-				const isValid = await bcrypt.compare(
-					data.password,
-					userWithPassword.password.hash,
-				)
-
-				// 🐨 if it's not valid, then create the same error as above and return z.NEVER
-				if (!isValid) {
+				const user = await login(data)
+				if (!user) {
 					ctx.addIssue({
 						code: 'custom',
 						message: 'Invalid username or password',
@@ -69,7 +50,7 @@ export async function action({ request }: DataFunctionArgs) {
 					return z.NEVER
 				}
 				// 🐨 don't return the password hash here, just make a user which is an object with an id
-				return { ...data, user: { id: userWithPassword.id } }
+				return { ...data, user }
 			}),
 		async: true,
 	})
@@ -96,7 +77,7 @@ export async function action({ request }: DataFunctionArgs) {
 	)
 
 	// 🐨 set the 'userId' in the session to the user.id
-	cookieSession.set('userId', user.id)
+	cookieSession.set(userIdKey, user.id)
 
 	// 🐨 update this redirect to add a 'set-cookie' header to the result of
 	// commitSession with the session value you're working with

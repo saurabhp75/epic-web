@@ -4,6 +4,7 @@
 import { type SVGProps } from 'react'
 import { cn } from '#app/utils/misc'
 import href from './icon.svg'
+import { type IconName } from '@/icon-name'
 export { href }
 
 const sizeClassName = {
@@ -61,26 +62,3 @@ export function Icon({
 		</svg>
 	)
 }
-
-export type IconName =
-	| 'arrow-left'
-	| 'arrow-right'
-	| 'avatar'
-	| 'camera'
-	| 'check'
-	| 'clock'
-	| 'cross-1'
-	| 'exit'
-	| 'file-text'
-	| 'laptop'
-	| 'lock-closed'
-	| 'lock-open-1'
-	| 'magnifying-glass'
-	| 'moon'
-	| 'pencil-1'
-	| 'pencil-2'
-	| 'plus'
-	| 'reset'
-	| 'sun'
-	| 'trash'
-	| 'update'
