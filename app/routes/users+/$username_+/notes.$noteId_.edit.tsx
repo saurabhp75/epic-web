@@ -36,8 +36,7 @@ import { validateCSRF } from '#app/utils/csrf.server'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { requireUser } from '#app/utils/auth.server'
 
-export async function loader({ params }: DataFunctionArgs) {
-	export async function loader({ params, request }: DataFunctionArgs) {
+export async function loader({ params, request }: DataFunctionArgs) {
 	const user = await requireUser(request)
 	invariantResponse(user.username === params.username, 'Not authorized', {
 		status: 403,
