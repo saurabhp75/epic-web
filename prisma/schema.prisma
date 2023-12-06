@@ -49,9 +49,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  image UserImage?
+  image    UserImage?
   password Password?
-  notes Note[]
+  notes    Note[]
+  roles    Role[]
 }
 
 model Note {
@@ -113,4 +114,51 @@ model Password {
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId String @unique
+}
+
+// 🐨 add a Permission model that has the following properties:
+// - id (as usual)
+// - action - a required string (will be one of create, read, update, delete)
+// - entity - a required string (will be one of user or note)
+// - access - a required string (will be one of own or any)
+// - description - a required string (which can default to "")
+// - createdAt (as usual)
+// - updatedAt (as usual)
+// - roles - an array of Roles
+// @@unique constraint of action, entity, and access
+// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#unique-1
+model Permission {
+  id          String @id @default(cuid())
+  action      String // e.g. create, read, update, delete
+  entity      String // e.g. note, user, etc.
+  access      String // e.g. own or any
+  description String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roles Role[]
+
+  @@unique([action, entity, access])
+}
+
+// 🐨 add a Role model that has an
+// - id (as usual)
+// - name - a required string
+// - description - a required string (which can default to "")
+// - createdAt (as usual)
+// - updatedAt (as usual)
+// - permissions - an array of Permissions
+// - users - an array of Users
+model Role {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Many to many relation doesn't have foreign key
+  users       User[] 
+  permissions Permission[]
 }
