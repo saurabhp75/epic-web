@@ -22,9 +22,10 @@ import { StatusButton } from '#app/components/ui/status-button'
 import { Icon } from '#app/components/ui/icon'
 import { ErrorList } from '#app/components/forms'
 import { useOptionalUser } from '#app/utils/user'
-import { requireUser } from '#app/utils/auth.server'
+import { getUserId, requireUser } from '#app/utils/auth.server'
 
-export async function loader({ params }: DataFunctionArgs) {
+export async function loader({ request, params }: DataFunctionArgs) {
+	const userId = await getUserId(request)
 	const note = await prisma.note.findUnique({
 		where: { id: params.noteId },
 		select: {
@@ -47,9 +48,31 @@ export async function loader({ params }: DataFunctionArgs) {
 	const date = new Date(note.updatedAt)
 	const timeAgo = formatDistanceToNow(date)
 
+	// 💰 this query is a little tricky if you're unfamiliar with Prisma so make
+	// sure to check the example in the instructions.
+	// 🐨 get the permission here. If the userId does not exist, don't bother,
+	// as the permission should just be null. If it does though, get the
+	// permission where "some" of the permission's roles have "some" users with the userId
+	// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#some
+	// 💰 you have the note.ownerId, so you can use that to decide whether you
+	// should be looking for "access: 'own'" or "access: 'any'".
+
+	const permission = userId
+		? await prisma.permission.findFirst({
+				select: { id: true },
+				where: {
+					roles: { some: { users: { some: { id: userId } } } },
+					entity: 'note',
+					action: 'delete',
+					access: note.ownerId === userId ? 'own' : 'any',
+				},
+		  })
+		: null
+
 	return json({
 		note,
 		timeAgo,
+		canDelete: Boolean(permission),
 	})
 }
 
@@ -58,11 +81,8 @@ const DeleteFormSchema = z.object({
 	noteId: z.string(),
 })
 
-export async function action({ request, params }: DataFunctionArgs) {
+export async function action({ request }: DataFunctionArgs) {
 	const user = await requireUser(request)
-	invariantResponse(user.username === params.username, 'Not authorized', {
-		status: 403,
-	})
 
 	const formData = await request.formData()
 
@@ -83,11 +103,34 @@ export async function action({ request, params }: DataFunctionArgs) {
 	const { noteId } = submission.value
 
 	const note = await prisma.note.findFirst({
-		select: { id: true, owner: { select: { username: true } } },
-		where: { id: noteId, ownerId: user.id },
+		select: { id: true, ownerId: true, owner: { select: { username: true } } },
+		where: { id: noteId },
 	})
 	invariantResponse(note, 'Not found', { status: 404 })
-	await prisma.note.delete({ where: { id: params.noteId } })
+
+	const permission = await prisma.permission.findFirst({
+		select: { id: true },
+		where: {
+			roles: { some: { users: { some: { id: user.id } } } },
+			entity: 'note',
+			action: 'delete',
+			access: note.ownerId === user.id ? 'own' : 'any',
+		},
+	})
+
+	// 🐨 if there is no permission, then throw a response with a 403 status code
+	// which you can handle in the error boundary below
+	if (!permission) {
+		throw json(
+			{
+				error: 'Unauthorized',
+				message: `Unauthorized: requires permission delete:note`,
+			},
+			{ status: 403 },
+		)
+	}
+
+	await prisma.note.delete({ where: { id: note.id } })
 	// 🐨 get the cookie header from the request
 	// 🐨 get the toastCookieSession using the toastSessionStorage.getSession
 	// 🐨 set a 'toast' value on the session with the following toast object:
@@ -119,10 +162,13 @@ export default function NoteRoute() {
 	const user = useOptionalUser()
 	const isOwner = user?.id === data.note.ownerId
 
+	const canDelete = data.canDelete
+	const displayBar = canDelete || isOwner
+
 	return (
 		<div className="absolute inset-0 flex flex-col px-10">
 			<h2 className="mb-2 pt-12 text-h2 lg:mb-6">{data.note.title}</h2>
-			<div className="overflow-y-auto pb-24">
+			<div className={`${displayBar ? 'pb-24' : 'pb-12'} overflow-y-auto`}>
 				<ul className="flex flex-wrap gap-5 py-5">
 					{data.note.images.map(image => (
 						<li key={image.id}>
@@ -140,7 +186,7 @@ export default function NoteRoute() {
 					{data.note.content}
 				</p>
 			</div>
-			{isOwner ? (
+			{displayBar ? (
 				<div className={floatingToolbarClassName}>
 					<span className="text-sm text-foreground/90 max-[524px]:hidden">
 						<Icon name="clock" className="scale-125">
@@ -148,7 +194,7 @@ export default function NoteRoute() {
 						</Icon>
 					</span>
 					<div className="grid flex-1 grid-cols-2 justify-end gap-2 min-[525px]:flex md:gap-4">
-						<DeleteNote id={data.note.id} />
+						{canDelete ? <DeleteNote id={data.note.id} /> : null}
 						<Button
 							asChild
 							className="min-[525px]:max-md:aspect-square min-[525px]:max-md:px-0"
@@ -233,6 +279,7 @@ export function ErrorBoundary() {
 	return (
 		<GeneralErrorBoundary
 			statusHandlers={{
+				403: () => <p>You are not allowed to do that</p>,
 				404: ({ params }) => (
 					<p>No note with the id "{params.noteId}" exists</p>
 				),
