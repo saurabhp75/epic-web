@@ -22,10 +22,10 @@ import { StatusButton } from '#app/components/ui/status-button'
 import { Icon } from '#app/components/ui/icon'
 import { ErrorList } from '#app/components/forms'
 import { useOptionalUser } from '#app/utils/user'
-import { getUserId, requireUser } from '#app/utils/auth.server'
+import { requireUser } from '#app/utils/auth.server'
+import { requireUserWithPermission, userHasPermission } from '#app/utils/permissions'
 
-export async function loader({ request, params }: DataFunctionArgs) {
-	const userId = await getUserId(request)
+export async function loader({ params }: DataFunctionArgs) {
 	const note = await prisma.note.findUnique({
 		where: { id: params.noteId },
 		select: {
@@ -48,31 +48,9 @@ export async function loader({ request, params }: DataFunctionArgs) {
 	const date = new Date(note.updatedAt)
 	const timeAgo = formatDistanceToNow(date)
 
-	// 💰 this query is a little tricky if you're unfamiliar with Prisma so make
-	// sure to check the example in the instructions.
-	// 🐨 get the permission here. If the userId does not exist, don't bother,
-	// as the permission should just be null. If it does though, get the
-	// permission where "some" of the permission's roles have "some" users with the userId
-	// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#some
-	// 💰 you have the note.ownerId, so you can use that to decide whether you
-	// should be looking for "access: 'own'" or "access: 'any'".
-
-	const permission = userId
-		? await prisma.permission.findFirst({
-				select: { id: true },
-				where: {
-					roles: { some: { users: { some: { id: userId } } } },
-					entity: 'note',
-					action: 'delete',
-					access: note.ownerId === userId ? 'own' : 'any',
-				},
-		  })
-		: null
-
 	return json({
 		note,
 		timeAgo,
-		canDelete: Boolean(permission),
 	})
 }
 
@@ -108,27 +86,11 @@ export async function action({ request }: DataFunctionArgs) {
 	})
 	invariantResponse(note, 'Not found', { status: 404 })
 
-	const permission = await prisma.permission.findFirst({
-		select: { id: true },
-		where: {
-			roles: { some: { users: { some: { id: user.id } } } },
-			entity: 'note',
-			action: 'delete',
-			access: note.ownerId === user.id ? 'own' : 'any',
-		},
-	})
-
-	// 🐨 if there is no permission, then throw a response with a 403 status code
-	// which you can handle in the error boundary below
-	if (!permission) {
-		throw json(
-			{
-				error: 'Unauthorized',
-				message: `Unauthorized: requires permission delete:note`,
-			},
-			{ status: 403 },
-		)
-	}
+	const isOwner = note.ownerId === user.id
+	await requireUserWithPermission(
+		request,
+		isOwner ? `delete:note:own` : `delete:note:any`,
+	)
 
 	await prisma.note.delete({ where: { id: note.id } })
 	// 🐨 get the cookie header from the request
@@ -162,7 +124,10 @@ export default function NoteRoute() {
 	const user = useOptionalUser()
 	const isOwner = user?.id === data.note.ownerId
 
-	const canDelete = data.canDelete
+	const canDelete = userHasPermission(
+		user,
+		isOwner ? `delete:note:own` : `delete:note:any`,
+	)
 	const displayBar = canDelete || isOwner
 
 	return (
