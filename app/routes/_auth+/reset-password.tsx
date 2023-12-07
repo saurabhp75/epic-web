@@ -1,14 +1,24 @@
 import { conform, useForm } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
-import { json, type DataFunctionArgs, type MetaFunction } from '@remix-run/node'
+import {
+	json,
+	type DataFunctionArgs,
+	type MetaFunction,
+	redirect,
+} from '@remix-run/node'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
 import { ErrorList, Field } from '#app/components/forms'
 import { StatusButton } from '#app/components/ui/status-button'
-import { useIsPending } from '#app/utils/misc'
+import { invariant, useIsPending } from '#app/utils/misc'
 import { PasswordSchema } from '#app/utils/user-validation'
 import { type VerifyFunctionArgs } from './verify'
+import { prisma } from '#app/utils/db.server'
+import { verifySessionStorage } from '#app/utils/verification.server'
+import { requireAnonymous, resetUserPassword } from '#app/utils/auth.server'
+
+const resetPasswordUsernameSessionKey = 'resetPasswordUsername'
 
 export async function handleVerification({
 	request,
@@ -24,6 +34,28 @@ export async function handleVerification({
 	// user's username in the session
 	// 🐨 then redirect to the reset password page
 	// 💰 don't forget to commit the session.
+	invariant(submission.value, 'submission.value should be defined by now')
+	const target = submission.value.target
+	const user = await prisma.user.findFirst({
+		where: { OR: [{ email: target }, { username: target }] },
+		select: { email: true, username: true },
+	})
+	// we don't want to say the user is not found if the email is not found
+	// because that would allow an attacker to check if an email is registered
+	if (!user) {
+		submission.error.code = ['Invalid code']
+		return json({ status: 'error', submission } as const, { status: 400 })
+	}
+
+	const verifySession = await verifySessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	verifySession.set(resetPasswordUsernameSessionKey, user.username)
+	return redirect('/reset-password', {
+		headers: {
+			'set-cookie': await verifySessionStorage.commitSession(verifySession),
+		},
+	})
 }
 
 const ResetPasswordSchema = z
@@ -36,12 +68,27 @@ const ResetPasswordSchema = z
 		path: ['confirmPassword'],
 	})
 
-export async function loader() {
-	const resetPasswordUsername = 'get this from the session'
+async function requireResetPasswordUsername(request: Request) {
+	await requireAnonymous(request)
+	const verifySession = await verifySessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	const resetPasswordUsername = verifySession.get(
+		resetPasswordUsernameSessionKey,
+	)
+	if (typeof resetPasswordUsername !== 'string' || !resetPasswordUsername) {
+		throw redirect('/login')
+	}
+	return resetPasswordUsername
+}
+
+export async function loader({ request }: DataFunctionArgs) {
+	const resetPasswordUsername = await requireResetPasswordUsername(request)
 	return json({ resetPasswordUsername })
 }
 
 export async function action({ request }: DataFunctionArgs) {
+	const resetPasswordUsername = await requireResetPasswordUsername(request)
 	const formData = await request.formData()
 	const submission = parse(formData, {
 		schema: ResetPasswordSchema,
@@ -53,7 +100,21 @@ export async function action({ request }: DataFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	throw new Error('This has not yet been implemented')
+	// 🐨 call the resetUserPassword utility here
+	const { password } = submission.value
+
+	// 🐨 remove the resetPasswordUsernameSessionKey from the session
+	// and redirect the user to login
+	// 💰 don't forget to destroy the session
+	await resetUserPassword({ username: resetPasswordUsername, password })
+	const verifySession = await verifySessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	return redirect('/login', {
+		headers: {
+			'set-cookie': await verifySessionStorage.destroySession(verifySession),
+		},
+	})
 }
 
 export const meta: MetaFunction = () => {
