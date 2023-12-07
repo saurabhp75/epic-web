@@ -30,6 +30,7 @@ import {
 	PasswordSchema,
 	UsernameSchema,
 } from '#app/utils/user-validation'
+import { verifySessionStorage } from '#app/utils/verification.server'
 
 export const onboardingEmailSessionKey = 'onboardingEmail'
 
@@ -56,17 +57,25 @@ const SignupFormSchema = z
 		}
 	})
 
+async function requireOnboardingEmail(request: Request) {
+	const verifySession = await verifySessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	const email = verifySession.get(onboardingEmailSessionKey)
+	if (typeof email !== 'string' || !email) {
+		throw redirect('/signup')
+	}
+	return email
+}
+
 export async function loader({ request }: DataFunctionArgs) {
-	await requireAnonymous(request)
-	// We'll do handle this later
-	const email = 'fake@email.com'
+	const email = await requireOnboardingEmail(request)
 	return json({ email })
 }
 
 export async function action({ request }: DataFunctionArgs) {
 	await requireAnonymous(request)
-	// We'll do handle this later
-	const email = 'fake@email.com'
+	const email = await requireOnboardingEmail(request)
 
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
@@ -106,13 +115,31 @@ export async function action({ request }: DataFunctionArgs) {
 	)
 	cookieSession.set(sessionKey, session.id)
 
-	return redirect(safeRedirect(redirectTo), {
-		headers: {
-			'set-cookie': await sessionStorage.commitSession(cookieSession, {
-				expires: remember ? session.expirationDate : undefined,
-			}),
-		},
-	})
+	// 🦉 you're going to need to set two cookies, one to get the user logged in
+	// and the other to destroy the verifySession. You can do this using the
+	// headers object
+	// 🐨 get the user's verifySession
+	// 🐨 create a new headers object: (💰 new Headers())
+	// 🐨 use headers.append to add the first 'set-cookie' header
+	// 🐨 use headers.append to add the second 'set-cookie' header
+	// 💰 the order doesn't matter
+
+	const verifySession = await verifySessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	const headers = new Headers()
+	headers.append(
+		'set-cookie',
+		await sessionStorage.commitSession(cookieSession, {
+			expires: remember ? session.expirationDate : undefined,
+		}),
+	)
+	headers.append(
+		'set-cookie',
+		await verifySessionStorage.destroySession(verifySession),
+	)
+
+	return redirect(safeRedirect(redirectTo), { headers })
 }
 
 export const meta: MetaFunction = () => {

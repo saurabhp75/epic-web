@@ -20,6 +20,8 @@ import { checkHoneypot } from '#app/utils/honeypot.server'
 import { useIsPending } from '#app/utils/misc'
 import { EmailSchema } from '#app/utils/user-validation'
 import { sendEmail } from '#app/utils/email.server'
+import { verifySessionStorage } from '#app/utils/verification.server'
+import { onboardingEmailSessionKey } from './onboarding'
 
 const SignupSchema = z.object({
 	email: EmailSchema,
@@ -71,8 +73,15 @@ export async function action({ request }: DataFunctionArgs) {
 	})
 
 	if (response.status === 'success') {
-		// we'll handle this soon...
-		return redirect('/onboarding')
+		const verifySession = await verifySessionStorage.getSession(
+			request.headers.get('cookie'),
+		)
+		verifySession.set(onboardingEmailSessionKey, email)
+		return redirect('/onboarding', {
+			headers: {
+				'set-cookie': await verifySessionStorage.commitSession(verifySession),
+			},
+		})
 	} else {
 		submission.error[''] = [response.error]
 		return json({ status: 'error', submission } as const, { status: 500 })
