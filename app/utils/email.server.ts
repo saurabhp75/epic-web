@@ -33,7 +33,7 @@ export async function sendEmail(options: {
 		},
 	})
 	const data = await response.json()
-	console.log(data)
+	// console.log(data)
 
 	if (response.ok) {
 		return { status: 'success' } as const

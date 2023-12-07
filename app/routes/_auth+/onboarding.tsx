@@ -1,52 +1,42 @@
+import { conform, useForm } from '@conform-to/react'
+import { getFieldsetConstraint, parse } from '@conform-to/zod'
 import {
+	json,
 	redirect,
 	type DataFunctionArgs,
 	type MetaFunction,
-	json,
 } from '@remix-run/node'
-import { Form, useActionData, useSearchParams } from '@remix-run/react'
-import { checkHoneypot } from '#app/utils/honeypot.server'
-import { HoneypotInputs } from 'remix-utils/honeypot/react'
-import { validateCSRF } from '#app/utils/csrf.server'
-import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import {
-	EmailSchema,
+	Form,
+	useActionData,
+	useLoaderData,
+	useSearchParams,
+} from '@remix-run/react'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
+import { HoneypotInputs } from 'remix-utils/honeypot/react'
+import { safeRedirect } from 'remix-utils/safe-redirect'
+import { z } from 'zod'
+import { CheckboxField, ErrorList, Field } from '#app/components/forms'
+import { Spacer } from '#app/components/spacer'
+import { StatusButton } from '#app/components/ui/status-button'
+import { requireAnonymous, sessionKey, signup } from '#app/utils/auth.server'
+import { validateCSRF } from '#app/utils/csrf.server'
+import { prisma } from '#app/utils/db.server'
+import { checkHoneypot } from '#app/utils/honeypot.server'
+import { useIsPending } from '#app/utils/misc'
+import { sessionStorage } from '#app/utils/session.server'
+import {
 	NameSchema,
 	PasswordSchema,
 	UsernameSchema,
 } from '#app/utils/user-validation'
-import { prisma } from '#app/utils/db.server'
-import { z } from 'zod'
-import { getFieldsetConstraint, parse } from '@conform-to/zod'
-import { requireAnonymous, signup, sessionKey } from '#app/utils/auth.server'
-import { Spacer } from '#app/components/spacer'
-import { useIsPending } from '#app/utils/misc'
-import { conform, useForm } from '@conform-to/react'
-import { CheckboxField, ErrorList, Field } from '#app/components/forms'
-import { StatusButton } from '#app/components/ui/status-button'
-import { sessionStorage } from '#app/utils/session.server'
-import { safeRedirect } from 'remix-utils/safe-redirect'
-// import { sendEmail } from '#app/utils/email.server'
 
-export async function loader({ request }: DataFunctionArgs) {
-	await requireAnonymous(request)
-	// 🐨 uncomment this to test it out:
-	// const response = await sendEmail({
-	// 	to: 'kody@kcd.dev',
-	// 	subject: 'Hello World',
-	// 	text: 'This is the plain text version',
-	// 	html: '<p>This is the HTML version</p>',
-	// })
-	// console.log(response)
-	// you should get a log with an error
-	return json({})
-}
+export const onboardingEmailSessionKey = 'onboardingEmail'
 
 const SignupFormSchema = z
 	.object({
 		username: UsernameSchema,
 		name: NameSchema,
-		email: EmailSchema,
 		password: PasswordSchema,
 		confirmPassword: PasswordSchema,
 		agreeToTermsOfServiceAndPrivacyPolicy: z.boolean({
@@ -66,11 +56,20 @@ const SignupFormSchema = z
 		}
 	})
 
+export async function loader({ request }: DataFunctionArgs) {
+	await requireAnonymous(request)
+	// We'll do handle this later
+	const email = 'fake@email.com'
+	return json({ email })
+}
+
 export async function action({ request }: DataFunctionArgs) {
 	await requireAnonymous(request)
+	// We'll do handle this later
+	const email = 'fake@email.com'
+
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
-	// 🐨 throw a 400 response if the name field is filled out
 	checkHoneypot(formData)
 	const submission = await parse(formData, {
 		schema: SignupFormSchema.superRefine(async (data, ctx) => {
@@ -87,7 +86,7 @@ export async function action({ request }: DataFunctionArgs) {
 				return
 			}
 		}).transform(async data => {
-			const session = await signup(data)
+			const session = await signup({ ...data, email })
 			return { ...data, session }
 		}),
 		async: true,
@@ -109,9 +108,6 @@ export async function action({ request }: DataFunctionArgs) {
 
 	return redirect(safeRedirect(redirectTo), {
 		headers: {
-			// 🐨 add an expires option to this commitSession call and set it to
-			// a date 30 days in the future if they checked the remember checkbox
-			// or undefined if they did not.
 			'set-cookie': await sessionStorage.commitSession(cookieSession, {
 				expires: remember ? session.expirationDate : undefined,
 			}),
@@ -119,10 +115,14 @@ export async function action({ request }: DataFunctionArgs) {
 	})
 }
 
+export const meta: MetaFunction = () => {
+	return [{ title: 'Setup Epic Notes Account' }]
+}
+
 export default function SignupRoute() {
+	const data = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
 	const isPending = useIsPending()
-
 	const [searchParams] = useSearchParams()
 	const redirectTo = searchParams.get('redirectTo')
 
@@ -141,7 +141,7 @@ export default function SignupRoute() {
 		<div className="container flex min-h-full flex-col justify-center pb-32 pt-20">
 			<div className="mx-auto w-full max-w-lg">
 				<div className="flex flex-col gap-3 text-center">
-					<h1 className="text-h1">Welcome aboard!</h1>
+					<h1 className="text-h1">Welcome aboard {data.email}!</h1>
 					<p className="text-body-md text-muted-foreground">
 						Please enter your details.
 					</p>
@@ -153,23 +153,7 @@ export default function SignupRoute() {
 					{...form.props}
 				>
 					<AuthenticityTokenInput />
-					{/* 🐨 render a hidden div with an "name" input */}
-					{/* 🦉 think about the accessibility implications. */}
-					{/* make sure screen readers will ignore this field */}
-					{/* add a label to tell the user to not fill out
-						the field in case they somehow notice it.
-					*/}
 					<HoneypotInputs />
-					<Field
-						labelProps={{ htmlFor: fields.email.id, children: 'Email' }}
-						inputProps={{
-							...conform.input(fields.email),
-							autoComplete: 'email',
-							autoFocus: true,
-							className: 'lowercase',
-						}}
-						errors={fields.email.errors}
-					/>
 					<Field
 						labelProps={{ htmlFor: fields.username.id, children: 'Username' }}
 						inputProps={{
@@ -220,7 +204,6 @@ export default function SignupRoute() {
 						)}
 						errors={fields.agreeToTermsOfServiceAndPrivacyPolicy.errors}
 					/>
-
 					<CheckboxField
 						labelProps={{
 							htmlFor: fields.remember.id,
@@ -231,7 +214,6 @@ export default function SignupRoute() {
 					/>
 
 					<input {...conform.input(fields.redirectTo, { type: 'hidden' })} />
-
 					<ErrorList errors={form.errors} id={form.errorId} />
 
 					<div className="flex items-center justify-between gap-6">
@@ -248,8 +230,4 @@ export default function SignupRoute() {
 			</div>
 		</div>
 	)
-}
-
-export const meta: MetaFunction = () => {
-	return [{ title: 'Setup Epic Notes Account' }]
 }
