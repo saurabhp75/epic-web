@@ -4,7 +4,7 @@ import {
 	type MetaFunction,
 	json,
 } from '@remix-run/node'
-import { Form, useActionData } from '@remix-run/react'
+import { Form, useActionData, useSearchParams } from '@remix-run/react'
 import { checkHoneypot } from '#app/utils/honeypot.server'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
 import { validateCSRF } from '#app/utils/csrf.server'
@@ -18,18 +18,14 @@ import {
 import { prisma } from '#app/utils/db.server'
 import { z } from 'zod'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
-import {
-	getSessionExpirationDate,
-	requireAnonymous,
-	signup,
-	userIdKey,
-} from '#app/utils/auth.server'
+import { requireAnonymous, signup, sessionKey } from '#app/utils/auth.server'
 import { Spacer } from '#app/components/spacer'
 import { useIsPending } from '#app/utils/misc'
 import { conform, useForm } from '@conform-to/react'
 import { CheckboxField, ErrorList, Field } from '#app/components/forms'
 import { StatusButton } from '#app/components/ui/status-button'
 import { sessionStorage } from '#app/utils/session.server'
+import { safeRedirect } from 'remix-utils/safe-redirect'
 
 export async function loader({ request }: DataFunctionArgs) {
 	await requireAnonymous(request)
@@ -48,6 +44,7 @@ const SignupFormSchema = z
 				'You must agree to the terms of service and privacy policy',
 		}),
 		remember: z.boolean().optional(),
+		redirectTo: z.string().optional(),
 	})
 	.superRefine(({ confirmPassword, password }, ctx) => {
 		if (confirmPassword !== password) {
@@ -80,8 +77,8 @@ export async function action({ request }: DataFunctionArgs) {
 				return
 			}
 		}).transform(async data => {
-			const user = await signup(data)
-			return { ...data, user }
+			const session = await signup(data)
+			return { ...data, session }
 		}),
 		async: true,
 	})
@@ -89,24 +86,24 @@ export async function action({ request }: DataFunctionArgs) {
 	if (submission.intent !== 'submit') {
 		return json({ status: 'idle', submission } as const)
 	}
-	if (!submission.value?.user) {
+	if (!submission.value?.session) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { user, remember } = submission.value
+	const { session, remember, redirectTo } = submission.value
 
 	const cookieSession = await sessionStorage.getSession(
 		request.headers.get('cookie'),
 	)
-	cookieSession.set(userIdKey, user.id)
+	cookieSession.set(sessionKey, session.id)
 
-	return redirect('/', {
+	return redirect(safeRedirect(redirectTo), {
 		headers: {
 			// 🐨 add an expires option to this commitSession call and set it to
 			// a date 30 days in the future if they checked the remember checkbox
 			// or undefined if they did not.
 			'set-cookie': await sessionStorage.commitSession(cookieSession, {
-				expires: remember ? getSessionExpirationDate() : undefined,
+				expires: remember ? session.expirationDate : undefined,
 			}),
 		},
 	})
@@ -116,9 +113,13 @@ export default function SignupRoute() {
 	const actionData = useActionData<typeof action>()
 	const isPending = useIsPending()
 
+	const [searchParams] = useSearchParams()
+	const redirectTo = searchParams.get('redirectTo')
+
 	const [form, fields] = useForm({
 		id: 'signup-form',
 		constraint: getFieldsetConstraint(SignupFormSchema),
+		defaultValue: { redirectTo },
 		lastSubmission: actionData?.submission,
 		onValidate({ formData }) {
 			return parse(formData, { schema: SignupFormSchema })
@@ -218,6 +219,8 @@ export default function SignupRoute() {
 						buttonProps={conform.input(fields.remember, { type: 'checkbox' })}
 						errors={fields.remember.errors}
 					/>
+
+					<input {...conform.input(fields.redirectTo, { type: 'hidden' })} />
 
 					<ErrorList errors={form.errors} id={form.errorId} />
 

@@ -8,13 +8,13 @@ export function useOptionalUser() {
 	return data?.user ?? null
 }
 
-// 🐨 create a useOptionalUser function which get's the root loader data and
+// get the root loader data and
 // returns the user if it exists, otherwise return null.
 
-// call useOptionalUser and if the user does not exist, throw
-// an error with an informative error message. Otherwise
-// return the user
 export function useUser() {
+	// call useOptionalUser and if the user does not exist, throw
+	// an error with an informative error message. 
+	// Otherwise return the user
 	const maybeUser = useOptionalUser()
 	if (!maybeUser) {
 		throw new Error(

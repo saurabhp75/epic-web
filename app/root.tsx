@@ -51,6 +51,7 @@ import { prisma } from './utils/db.server'
 import { sessionStorage } from './utils/session.server'
 import { useOptionalUser } from './utils/user'
 import { userHasRole } from './utils/permissions'
+import { getUserId } from './utils/auth.server'
 
 // import {
 // 	AlertDialog,
@@ -107,19 +108,13 @@ export async function loader({ request }: DataFunctionArgs) {
 	// 🐨 get the 'toast' from the toastCookieSession
 	const { toast, headers: toastHeaders } = await getToast(request)
 
-	// 🐨 get the cookie header from the request
-	const cookieSession = await sessionStorage.getSession(
-		request.headers.get('cookie'),
-	)
-
-	// 🐨 get the userId from the cookie session
-	const userId = cookieSession.get('userId')
+	const userId = await getUserId(request)
 
 	// 🐨 if there's a userId, then get the user from the database
 	// 💰 you will want to specify a select. You'll need the id, username, name,
 	// and image's id
 	const user = userId
-		? await prisma.user.findUnique({
+		? await prisma.user.findUniqueOrThrow({
 				select: {
 					id: true,
 					name: true,
@@ -220,6 +215,7 @@ function App() {
 	// 🐨 use the userHasRole utility to determine if the user is an admin
 	const userIsAdmin = userHasRole(user, 'admin')
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
+	// console.log(user)
 
 	return (
 		<Document theme={theme} env={data.ENV}>

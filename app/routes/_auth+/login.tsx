@@ -19,12 +19,7 @@ import { checkHoneypot } from '#app/utils/honeypot.server'
 import { useIsPending } from '#app/utils/misc'
 import { PasswordSchema, UsernameSchema } from '#app/utils/user-validation'
 import { sessionStorage } from '#app/utils/session.server'
-import {
-	getSessionExpirationDate,
-	login,
-	requireAnonymous,
-	userIdKey,
-} from '#app/utils/auth.server'
+import { login, requireAnonymous, sessionKey } from '#app/utils/auth.server'
 import { safeRedirect } from 'remix-utils/safe-redirect'
 
 const LoginFormSchema = z.object({
@@ -47,19 +42,17 @@ export async function action({ request }: DataFunctionArgs) {
 	const submission = await parse(formData, {
 		schema: intent =>
 			LoginFormSchema.transform(async (data, ctx) => {
-				if (intent !== 'submit') return { ...data, user: null }
-				// 🐨 find the user in the database by their username
+				if (intent !== 'submit') return { ...data, session: null }
 
-				const user = await login(data)
-				if (!user) {
+				const session = await login(data)
+				if (!session) {
 					ctx.addIssue({
 						code: 'custom',
 						message: 'Invalid username or password',
 					})
 					return z.NEVER
 				}
-				// 🐨 don't return the password hash here, just make a user which is an object with an id
-				return { ...data, user }
+				return { ...data, session }
 			}),
 		async: true,
 	})
@@ -72,12 +65,12 @@ export async function action({ request }: DataFunctionArgs) {
 		return json({ status: 'idle', submission } as const)
 	}
 
-	if (!submission.value?.user) {
+	if (!submission.value?.session) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
 	// 🐨 get the user from the submission.value
-	const { user, remember, redirectTo } = submission.value
+	const { session, remember, redirectTo } = submission.value
 
 	// request's cookie header 💰 request.headers.get('cookie')
 	// 🐨 use the getSession utility to get the session value from the
@@ -85,8 +78,7 @@ export async function action({ request }: DataFunctionArgs) {
 		request.headers.get('cookie'),
 	)
 
-	// 🐨 set the 'userId' in the session to the user.id
-	cookieSession.set(userIdKey, user.id)
+	cookieSession.set(sessionKey, session.id)
 
 	// 🐨 update this redirect to add a 'set-cookie' header to the result of
 	// commitSession with the session value you're working with
@@ -96,7 +88,7 @@ export async function action({ request }: DataFunctionArgs) {
 			// a date 30 days in the future if they checked the remember checkbox
 			// or undefined if they did not.
 			'set-cookie': await sessionStorage.commitSession(cookieSession, {
-				expires: remember ? getSessionExpirationDate() : undefined,
+				expires: remember ? session.expirationDate : undefined,
 			}),
 		},
 	})
