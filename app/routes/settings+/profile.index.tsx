@@ -20,7 +20,7 @@ import {
 	NameSchema,
 	UsernameSchema,
 } from '#app/utils/user-validation'
-import { requireUserId } from '#app/utils/auth.server'
+import { requireUserId, sessionKey } from '#app/utils/auth.server'
 
 const ProfileFormSchema = z.object({
 	name: NameSchema.optional(),
@@ -39,6 +39,19 @@ export async function loader({ request }: DataFunctionArgs) {
 			email: true,
 			image: {
 				select: { id: true },
+			},
+			// 🐨 add a count of the number of sessions for this user
+			// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#select-a-_count-of-relations
+			// 💰 also only select those which have not yet expired!
+			// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#gt
+			_count: {
+				select: {
+					sessions: {
+						where: {
+							expirationDate: { gt: new Date() },
+						},
+					},
+				},
 			},
 		},
 	})
@@ -251,15 +264,31 @@ async function signOutOfSessionsAction({ request, userId }: ProfileActionArgs) {
 	// 🐨 get the sessionId from the cookieSession (you'll need to use getSession for this)
 	// 🐨 delete all the sessions that are not the current session
 	// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#not
+	const cookieSession = await sessionStorage.getSession(
+		request.headers.get('cookie'),
+	)
+	const sessionId = cookieSession.get(sessionKey)
+	invariantResponse(
+		sessionId,
+		'You must be authenticated to sign out of other sessions',
+	)
+	await prisma.session.deleteMany({
+		where: {
+			userId,
+			id: { not: sessionId },
+		},
+	})
+
 	return json({ status: 'success' } as const)
 }
 
 function SignOutOfSessions() {
 	// 🐨 get the loader data using useLoaderData
+	const data = useLoaderData<typeof loader>()
 	const dc = useDoubleCheck()
 
 	const fetcher = useFetcher<typeof signOutOfSessionsAction>()
-	const otherSessionsCount = 0 // 🐨 this should be the count of sessions minus 1
+	const otherSessionsCount = data.user._count.sessions - 1
 	return (
 		<div>
 			{otherSessionsCount ? (
