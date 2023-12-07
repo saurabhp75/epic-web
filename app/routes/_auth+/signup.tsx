@@ -26,9 +26,19 @@ import { CheckboxField, ErrorList, Field } from '#app/components/forms'
 import { StatusButton } from '#app/components/ui/status-button'
 import { sessionStorage } from '#app/utils/session.server'
 import { safeRedirect } from 'remix-utils/safe-redirect'
+import { sendEmail } from '#app/utils/email.server'
 
 export async function loader({ request }: DataFunctionArgs) {
 	await requireAnonymous(request)
+	// 🐨 uncomment this to test it out:
+	const response = await sendEmail({
+		to: 'kody@kcd.dev',
+		subject: 'Hello World',
+		text: 'This is the plain text version',
+		html: '<p>This is the HTML version</p>',
+	})
+	console.log(response)
+	// you should get a log with an error
 	return json({})
 }
 

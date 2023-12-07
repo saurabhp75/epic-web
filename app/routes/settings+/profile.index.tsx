@@ -21,6 +21,7 @@ import {
 	UsernameSchema,
 } from '#app/utils/user-validation'
 import { requireUserId, sessionKey } from '#app/utils/auth.server'
+import { sessionStorage } from '#app/utils/session.server'
 
 const ProfileFormSchema = z.object({
 	name: NameSchema.optional(),
