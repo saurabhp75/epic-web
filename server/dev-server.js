@@ -10,6 +10,7 @@ if (process.env.NODE_ENV === 'production') {
 		shell: true,
 		env: {
 			FORCE_COLOR: true,
+			// 🐨 set MOCKS: true, here so during development we use the mocks.
 			MOCKS: true,
 			...process.env,
 		},

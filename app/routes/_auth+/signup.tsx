@@ -27,6 +27,7 @@ import { StatusButton } from '#app/components/ui/status-button'
 import { sessionStorage } from '#app/utils/session.server'
 import { safeRedirect } from 'remix-utils/safe-redirect'
 import { sendEmail } from '#app/utils/email.server'
+// import { sendEmail } from '#app/utils/email.server'
 
 export async function loader({ request }: DataFunctionArgs) {
 	await requireAnonymous(request)
