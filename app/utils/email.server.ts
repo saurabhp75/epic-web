@@ -1,11 +1,36 @@
-import { getErrorMessage } from './misc'
+import { z } from 'zod'
+import { type ReactElement } from 'react'
+import { renderAsync } from '@react-email/components'
 
-export async function sendEmail(options: {
+const ResendErrorSchema = z.union([
+	z.object({
+		name: z.string(),
+		message: z.string(),
+		statusCode: z.number(),
+	}),
+	z.object({
+		name: z.literal('UnknownError'),
+		message: z.literal('Unknown Error'),
+		statusCode: z.literal(500),
+		cause: z.any(),
+	}),
+])
+type ResendError = z.infer<typeof ResendErrorSchema>
+
+const ResendSuccessSchema = z.object({
+	id: z.string(),
+})
+
+export async function sendEmail({
+	react,
+	...options
+}: {
 	to: string
 	subject: string
-	html?: string
-	text: string
-}) {
+} & (
+	| { html: string; text: string; react?: never }
+	| { react: ReactElement; html?: never; text?: never }
+)) {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const from = 'hello@epicstack.dev'
 
@@ -13,6 +38,7 @@ export async function sendEmail(options: {
 		// 🐨 set the from to whatever address you'd like
 		from,
 		...options,
+		...(react ? await renderReactEmail(react) : null),
 	}
 
 	// 📜 https://resend.com/docs/api-reference/emails/send-email
@@ -34,13 +60,38 @@ export async function sendEmail(options: {
 	})
 	const data = await response.json()
 	// console.log(data)
+	const parsedData = ResendSuccessSchema.safeParse(data)
 
-	if (response.ok) {
-		return { status: 'success' } as const
-	} else {
+	if (response.ok && parsedData.success) {
 		return {
-			status: 'error',
-			error: getErrorMessage(data),
+			status: 'success',
+			data: parsedData,
 		} as const
+	} else {
+		const parseResult = ResendErrorSchema.safeParse(data)
+		if (parseResult.success) {
+			return {
+				status: 'error',
+				error: parseResult.data,
+			} as const
+		} else {
+			return {
+				status: 'error',
+				error: {
+					name: 'UnknownError',
+					message: 'Unknown Error',
+					statusCode: 500,
+					cause: data,
+				} satisfies ResendError,
+			} as const
+		}
 	}
+}
+
+async function renderReactEmail(react: ReactElement) {
+	const [html, text] = await Promise.all([
+		renderAsync(react),
+		renderAsync(react, { plainText: true }),
+	])
+	return { html, text }
 }

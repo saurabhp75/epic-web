@@ -24,6 +24,7 @@
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tooltip": "^1.0.7",
+    "@react-email/components": "^0.0.12",
     "@remix-run/css-bundle": "^2.3.1",
     "@remix-run/node": "^2.3.1",
     "@remix-run/react": "^2.3.1",
