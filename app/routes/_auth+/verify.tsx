@@ -19,6 +19,7 @@ import { prisma } from '#app/utils/db.server'
 import { generateTOTP, verifyTOTP } from '@epic-web/totp'
 import { handleVerification as handleResetPasswordVerification } from './reset-password'
 import { handleVerification as handleChangeEmailVerification } from '#app/routes/settings+/profile.change-email'
+import type { twoFAVerifyVerificationType } from '../settings+/profile.two-factor.verify'
 // import { onboardingEmailSessionKey } from './onboarding'
 
 export const codeQueryParam = 'code'
@@ -26,7 +27,7 @@ export const targetQueryParam = 'target'
 export const typeQueryParam = 'type'
 export const redirectToQueryParam = 'redirectTo'
 
-const types = ['onboarding', 'reset-password', 'change-email'] as const
+const types = ['onboarding', 'reset-password', 'change-email', '2fa'] as const
 const VerificationTypeSchema = z.enum(types)
 export type VerificationTypes = z.infer<typeof VerificationTypeSchema>
 
@@ -136,7 +137,9 @@ export async function isCodeValid({
 	target,
 }: {
 	code: string
-	type: VerificationTypes
+	// 🐨 add | typeof twoFAVerifyVerificationType from '../settings+/profile.two-factor.verify.tsx'
+	// 🦉 we're not adding that type to the valid types in general because it's a temporary type
+	type: VerificationTypes | typeof twoFAVerifyVerificationType
 	target: string
 }) {
 	const verification = await prisma.verification.findUnique({
@@ -220,6 +223,10 @@ async function validateRequest(
 		}
 		case 'change-email': {
 			return handleChangeEmailVerification({ request, body, submission })
+		}
+		// you can just throw an error for now, we'll get to this next...
+		case '2fa': {
+			throw new Error('not yet implemented')
 		}
 	}
 }

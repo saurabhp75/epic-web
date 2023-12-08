@@ -18,6 +18,7 @@ import {
 import { NameSchema, UsernameSchema } from '#app/utils/user-validation'
 import { requireUserId, sessionKey } from '#app/utils/auth.server'
 import { sessionStorage } from '#app/utils/session.server'
+import { twoFAVerificationType } from './profile.two-factor'
 
 const ProfileFormSchema = z.object({
 	name: NameSchema.optional(),
@@ -26,7 +27,7 @@ const ProfileFormSchema = z.object({
 
 export async function loader({ request }: DataFunctionArgs) {
 	const userId = await requireUserId(request)
-	const user = await prisma.user.findUnique({
+	const user = await prisma.user.findUniqueOrThrow({
 		where: { id: userId },
 		select: {
 			id: true,
@@ -52,9 +53,15 @@ export async function loader({ request }: DataFunctionArgs) {
 		},
 	})
 
-	invariantResponse(user, 'User not found', { status: 404 })
+	// 🐨 determine whether the user has 2fa by checking for a verification and
+	// by the type twoFAVerifyVerificationType and the target being the userId.
+	// 🐨 Set isTwoFAEnabled to true if it exists.
+	const twoFactorVerification = await prisma.verification.findUnique({
+		select: { id: true },
+		where: { target_type: { type: twoFAVerificationType, target: userId } },
+	})
 
-	return json({ user })
+	return json({ user, isTwoFAEnabled: Boolean(twoFactorVerification) })
 }
 
 type ProfileActionArgs = {
@@ -124,6 +131,15 @@ export default function EditUserProfile() {
 						<Icon name="envelope-closed">
 							Change email from {data.user.email}
 						</Icon>
+					</Link>
+				</div>
+				<div>
+					<Link to="two-factor">
+						{data.isTwoFAEnabled ? (
+							<Icon name="lock-closed">2FA is enabled</Icon>
+						) : (
+							<Icon name="lock-open-1">Enable 2FA</Icon>
+						)}
 					</Link>
 				</div>
 				<div>
