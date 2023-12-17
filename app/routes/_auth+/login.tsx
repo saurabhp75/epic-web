@@ -26,6 +26,9 @@ import { verifySessionStorage } from '#app/utils/verification.server'
 import { prisma } from '#app/utils/db.server'
 import { redirectWithToast } from '#app/utils/toast.server'
 import { twoFAVerificationType } from '../settings+/profile.two-factor'
+import { sendEmail } from '#app/utils/email.server'
+import { generateTOTP } from '@epic-web/totp'
+import * as E from '@react-email/components'
 
 const verifiedTimeKey = 'verified-time'
 const unverifiedSessionIdKey = 'unverified-session-id'
@@ -188,16 +191,46 @@ export async function action({ request }: DataFunctionArgs) {
 		const verifySession = await verifySessionStorage.getSession()
 		verifySession.set(unverifiedSessionIdKey, session.id)
 		verifySession.set(rememberKey, remember)
-		const redirectUrl = getRedirectToUrl({
-			request,
-			type: twoFAVerificationType,
-			target: session.userId,
-		})
-		return redirect(redirectUrl.toString(), {
-			headers: {
-				'set-cookie': await verifySessionStorage.commitSession(verifySession),
+
+		// get verification details from db
+		const twoFactorVerification = await prisma.verification.findUnique({
+			select: { secret: true, algorithm: true, digits: true, period: true },
+			where: {
+				target_type: { type: twoFAVerificationType, target: session.userId },
 			},
 		})
+
+		// get otp from verification details
+		const { otp } = generateTOTP({ ...twoFactorVerification })
+
+		// get the user's email from db
+		const user = await prisma.user.findUniqueOrThrow({
+			where: { id: session.userId },
+			select: { id: true, email: true },
+		})
+
+		// send an email with otp
+		const response = await sendEmail({
+			to: user.email,
+			subject: `OTP for Epic Notes login`,
+			react: <LoginEmail otp={otp} />,
+		})
+
+		if (response.status === 'success') {
+			const redirectUrl = getRedirectToUrl({
+				request,
+				type: twoFAVerificationType,
+				target: session.userId,
+			})
+			return redirect(redirectUrl.toString(), {
+				headers: {
+					'set-cookie': await verifySessionStorage.commitSession(verifySession),
+				},
+			})
+		} else {
+			submission.error[''] = [response.error.message]
+			return json({ status: 'error', submission } as const, { status: 500 })
+		}
 	} else {
 		const cookieSession = await sessionStorage.getSession(
 			request.headers.get('cookie'),
@@ -217,6 +250,23 @@ export async function action({ request }: DataFunctionArgs) {
 			},
 		})
 	}
+}
+
+export function LoginEmail({ otp }: { otp: string }) {
+	return (
+		<E.Html lang="en" dir="ltr">
+			<E.Container>
+				<h1>
+					<E.Text>OTP for Epic Notes login</E.Text>
+				</h1>
+				<p>
+					<E.Text>
+						Here's your verification code: <strong>{otp}</strong>
+					</E.Text>
+				</p>
+			</E.Container>
+		</E.Html>
+	)
 }
 
 export default function LoginPage() {
