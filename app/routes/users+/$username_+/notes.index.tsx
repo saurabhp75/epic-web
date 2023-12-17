@@ -13,9 +13,9 @@ export const meta: MetaFunction<
 	null,
 	{ 'routes/users+/$username_+/notes': typeof notesLoader }
 > = ({ params, matches }) => {
-	// 🐨 use the matches from the parameters to find the route for notes by that ID
-	// 💰 matches.find(m => m.id === 'routes/users+/$username_+/notes')
-	// 🐨 use the matches to find the notes route
+	// use the matches from the parameters to find the route for notes by that ID
+	// matches.find(m => m.id === 'routes/users+/$username_+/notes')
+	// use the matches to find the notes route
 
 	const notesMatch = matches.find(
 		m => m.id === 'routes/users+/$username_+/notes',

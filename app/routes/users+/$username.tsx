@@ -11,7 +11,7 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 export async function loader({ params }: DataFunctionArgs) {
 	// Below error will be caught by error boundary
-	// throw new Error('🐨 Loader error')
+	// throw new Error('Loader error')
 
 	const user = await prisma.user.findFirst({
 		// Select only the needed columns
@@ -42,15 +42,15 @@ export async function loader({ params }: DataFunctionArgs) {
 
 export default function ProfileRoute() {
 	// Below error will be caught by error boundary
-	// throw new Error('🐨 Loader error')
+	// throw new Error('Loader error')
 
 	const data = useLoaderData<typeof loader>()
 	const user = data.user
 	const userDisplayName = user.name ?? user.username
 
-	// 🐨 get the logged in user and compare the user.id and the logged in user's
+	// get the logged in user and compare the user.id and the logged in user's
 	// id to determine whether this is the logged in user's profile or not.
-	// 💰 you'll want useOptionalUser for this one.
+	// you'll want useOptionalUser for this one.
 	const loggedInUser = useOptionalUser()
 	const isLoggedInUser = data.user.id === loggedInUser?.id
 

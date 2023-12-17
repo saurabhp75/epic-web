@@ -7,20 +7,20 @@ import { createPassword } from '#tests/db-utils'
 
 const prisma = new PrismaClient()
 
-// 🐨 create a unique username enforcer here
+// create a unique username enforcer here
 const uniqueUsernameEnforcer = new UniqueEnforcer()
 
 export function createUser() {
 	const firstName = faker.person.firstName()
 	const lastName = faker.person.lastName()
 
-	// 💯 you might add a tiny bit of random alphanumeric characters to the start
+	// you might add a tiny bit of random alphanumeric characters to the start
 	// of the username to reduce the chance of collisions.
 
-	// 🐨 transform the username to only be the first 20 characters
-	// 💰 you can use .slice(0, 20) for this
-	// 🐨 turn the username to lowercase
-	// 🐨 replace any non-alphanumeric characters with an underscore
+	// transform the username to only be the first 20 characters
+	// you can use .slice(0, 20) for this
+	// turn the username to lowercase
+	// replace any non-alphanumeric characters with an underscore
 	const username = uniqueUsernameEnforcer
 		.enforce(() => {
 			return (
@@ -122,14 +122,14 @@ async function seed() {
 	for (let index = 0; index < totalUsers; index++) {
 		const userData = createUser()
 		await prisma.user.create({
-			// 🐨 add a select to just get the ID so we're not pulling back the
+			// add a select to just get the ID so we're not pulling back the
 			// entire user object.
 			select: { id: true },
 			data: {
 				...userData,
-				// 🐨 add a password here
-				// 💰 to make it easy to login as users, you can set the password to
-				// the username. Obviously this isn't secure, but this is test data 🤷‍♂️
+				// add a password here
+				// to make it easy to login as users, you can set the password to
+				// the username. Obviously this isn't secure, but this is test data
 				password: { create: createPassword(userData.username) },
 				image: { create: userImages[index % 10] },
 				roles: { connect: { name: 'user' } },
@@ -190,17 +190,17 @@ async function seed() {
 	})
 
 	await prisma.user.create({
-		// 🐨 add a select to just get the ID so we're not pulling back the
+		// add a select to just get the ID so we're not pulling back the
 		// entire user object.
 		select: { id: true },
 		data: {
 			email: 'kody@kcd.dev',
 			username: 'kody',
 			name: 'Kody',
-			// 🐨 add Kody's profile image here (💰 kodyImages.kodyUser)
+			// add Kody's profile image here (kodyImages.kodyUser)
 			image: { create: kodyImages.kodyUser },
 			password: { create: createPassword('kodylovesyou') },
-			// 🐨 connect the admin and user roles to this user
+			// connect the admin and user roles to this user
 			roles: { connect: [{ name: 'admin' }, { name: 'user' }] },
 			notes: {
 				create: [
@@ -209,7 +209,7 @@ async function seed() {
 						title: 'Basic Koala Facts',
 						content:
 							'Koalas are found in the eucalyptus forests of eastern Australia. They have grey fur with a cream-coloured chest, and strong, clawed feet, perfect for living in the branches of trees!',
-						// 🐨 swap these hard-coded images for the ones in kodyImages
+						// swap these hard-coded images for the ones in kodyImages
 						images: { create: [kodyImages.cuteKoala, kodyImages.koalaEating] },
 					},
 					{

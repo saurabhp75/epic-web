@@ -4,7 +4,7 @@ import { Spacer } from '#app/components/spacer'
 import { requireUserWithRole } from '#app/utils/permissions'
 
 export async function loader({ request }: DataFunctionArgs) {
-	// 🐨 lock down this route to only users with the "admin" role with the
+	// lock down this route to only users with the "admin" role with the
 	// requireUserWithRole utility
 	await requireUserWithRole(request, 'admin')
 	return json({})

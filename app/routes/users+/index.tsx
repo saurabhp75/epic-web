@@ -40,7 +40,7 @@ export async function loader({ request }: DataFunctionArgs) {
 		LIMIT 50
 	`
 
-	// 🐨 use your new schema to safely parse the rawUsers.
+	// use your new schema to safely parse the rawUsers.
 	//   If there's an error, then return json with the error (result.error.message)
 	//   If there is not an error, then return json with the users
 	const result = UserSearchResultsSchema.safeParse(rawUsers)

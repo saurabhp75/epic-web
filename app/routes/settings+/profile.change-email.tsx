@@ -39,6 +39,7 @@ export async function handleVerification({
 	)
 	const newEmail = verifySession.get(newEmailAddressSessionKey)
 	if (!newEmail) {
+		// Form level error
 		submission.error[''] = [
 			'You must submit the code on the same device that requested the email change.',
 		]
@@ -118,9 +119,9 @@ export async function action({ request }: DataFunctionArgs) {
 	if (!submission.value) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
-	// 🐨 get the otp, redirectUrl, and verifyUrl from prepareVerification
-	// 💰 you'll need to create a new verification type in verify.tsx
-	// 🐨 the target should be the user's id
+	// get the otp, redirectUrl, and verifyUrl from prepareVerification
+	// you'll need to create a new verification type in verify.tsx
+	// the target should be the user's id
 	const { otp, redirectTo, verifyUrl } = await prepareVerification({
 		period: 10 * 60,
 		request,
@@ -135,8 +136,8 @@ export async function action({ request }: DataFunctionArgs) {
 	})
 
 	if (response.status === 'success') {
-		// 🐨 get the user's verifySession
-		// 🐨 set the newEmailAddressSessionKey to the email address
+		// get the user's verifySession
+		// set the newEmailAddressSessionKey to the email address
 		const verifySession = await verifySessionStorage.getSession(
 			request.headers.get('cookie'),
 		)
@@ -144,7 +145,7 @@ export async function action({ request }: DataFunctionArgs) {
 
 		return redirect(redirectTo.toString(), {
 			headers: {
-				// 🐨 commit the verifySession here
+				// commit the verifySession here
 				'set-cookie': await verifySessionStorage.commitSession(verifySession),
 			},
 		})

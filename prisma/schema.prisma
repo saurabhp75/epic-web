@@ -29,6 +29,7 @@
 // CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 // Creating index manually using Prisma
 // @@index[fieldname1, fieldname2 ...]  // normally at the most 2 keys are used for indexing
+// "npx prisms db reset" : clear the db, run all the migrations and then run seed script.
 
 generator client {
   provider = "prisma-client-js"

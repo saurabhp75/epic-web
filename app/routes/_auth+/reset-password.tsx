@@ -24,16 +24,15 @@ export async function handleVerification({
 	request,
 	submission,
 }: VerifyFunctionArgs) {
-	// 🐨 the submission.value.target is the user's email or username. Use that to
+	// the submission.value.target is the user's email or username. Use that to
 	// find the user in the database.
-	// 💰 You'll probably want to use OR to match either the email or username
-	// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#or
-	// 🐨 if the user doesn't exist, then set submission.error.code = 'Invalid code'
+	// You'll probably want to use OR to match either the email or username
+	// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#or
+	// if the user doesn't exist, then set submission.error.code = 'Invalid code'
 	// and return a json response with a 400 status code
-	// 🐨 otherwise, get the verifySession from the request and set the
+	// otherwise, get the verifySession from the request and set the
 	// user's username in the session
-	// 🐨 then redirect to the reset password page
-	// 💰 don't forget to commit the session.
+	// then redirect to the reset password page and commit the session.
 	invariant(submission.value, 'submission.value should be defined by now')
 	const target = submission.value.target
 	const user = await prisma.user.findFirst({
@@ -68,7 +67,9 @@ const ResetPasswordSchema = z
 		path: ['confirmPassword'],
 	})
 
+// Check if the user can be on this route based on the request and cookie
 async function requireResetPasswordUsername(request: Request) {
+	// If the user is logged in redirect to home page(/).
 	await requireAnonymous(request)
 	const verifySession = await verifySessionStorage.getSession(
 		request.headers.get('cookie'),
@@ -76,6 +77,7 @@ async function requireResetPasswordUsername(request: Request) {
 	const resetPasswordUsername = verifySession.get(
 		resetPasswordUsernameSessionKey,
 	)
+	// If the en-verification cookie is not set redirect the user to login
 	if (typeof resetPasswordUsername !== 'string' || !resetPasswordUsername) {
 		throw redirect('/login')
 	}
@@ -100,12 +102,11 @@ export async function action({ request }: DataFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	// 🐨 call the resetUserPassword utility here
+	// call the resetUserPassword utility here
 	const { password } = submission.value
 
-	// 🐨 remove the resetPasswordUsernameSessionKey from the session
-	// and redirect the user to login
-	// 💰 don't forget to destroy the session
+	// remove the resetPasswordUsernameSessionKey from the session
+	// and redirect the user to login and destroy the session
 	await resetUserPassword({ username: resetPasswordUsername, password })
 	const verifySession = await verifySessionStorage.getSession(
 		request.headers.get('cookie'),

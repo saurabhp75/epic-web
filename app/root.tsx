@@ -99,19 +99,19 @@ export async function loader({ request }: DataFunctionArgs) {
 	// })
 
 	const honeyProps = honeypot.getInputProps()
-	// 🐨 get the csrfToken and csrfCookieHeader from csrf.commitToken
-	// 🐨 add the csrfToken to this object
-	// 🐨 add a 'set-cookie' header to the response with the csrfCookieHeader
+	// get the csrfToken and csrfCookieHeader from csrf.commitToken
+	// add the csrfToken to this object
+	// add a 'set-cookie' header to the response with the csrfCookieHeader
 	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
 
-	// 🐨 get the toastCookieSession using the toastSessionStorage.getSession
-	// 🐨 get the 'toast' from the toastCookieSession
+	// get the toastCookieSession using the toastSessionStorage.getSession
+	// get the 'toast' from the toastCookieSession
 	const { toast, headers: toastHeaders } = await getToast(request)
 
 	const userId = await getUserId(request)
 
-	// 🐨 if there's a userId, then get the user from the database
-	// 💰 you will want to specify a select. You'll need the id, username, name,
+	// if there's a userId, then get the user from the database
+	// you will want to specify a select. You'll need the id, username, name,
 	// and image's id
 	const user = userId
 		? await prisma.user.findUniqueOrThrow({
@@ -133,9 +133,13 @@ export async function loader({ request }: DataFunctionArgs) {
 		  })
 		: null
 
-	// 🐨 if there's a userId but no user then something's wrong.
+	// if there's a userId but no user then something's wrong.
 	// Let's delete destroy the session and redirect to the home page.
 	if (userId && !user) {
+		// get the cookie header from the request
+		const cookieSession = await sessionStorage.getSession(
+			request.headers.get('cookie'),
+		)
 		// something weird happened... The user is authenticated but we can't find
 		// them in the database. Maybe they were deleted? Let's log them out.
 		throw redirect('/', {
@@ -148,7 +152,7 @@ export async function loader({ request }: DataFunctionArgs) {
 	return json(
 		{
 			username: os.userInfo().username,
-			// 🐨 add the user here (if there was no userId then the user can be null)
+			// add the user here (if there was no userId then the user can be null)
 			// 💰 don't forget to update the component below to access the user from the data.
 			user,
 			theme: getTheme(request),
@@ -158,7 +162,7 @@ export async function loader({ request }: DataFunctionArgs) {
 			csrfToken,
 		},
 		{
-			// 🐨  "combineHeaders" combine 'set-cookie' headers for toast
+			// "combineHeaders" combine 'set-cookie' headers for toast
 			// and csrf related cookies
 			headers: combineHeaders(
 				csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : null,
@@ -189,16 +193,16 @@ export async function action({ request }: DataFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	// 🐨 get the theme from the submission.value
-	// 🐨 get the value of the cookie header by calling setTheme with the theme
+	// get the theme from the submission.value
+	// get the value of the cookie header by calling setTheme with the theme
 	const { theme } = submission.value
 
-	// 🐨 Uncomment the console.log to test things out:
+	// Uncomment the console.log to test things out:
 	// console.log(submission.value)
 
 	const responseInit = {
 		headers: {
-			// 🐨 add a 'set-cookie' header to this response and set it to the
+			// add a 'set-cookie' header to this response and set it to the
 			// serialized cookie:
 			'set-cookie': setTheme(theme),
 		},
@@ -207,12 +211,12 @@ export async function action({ request }: DataFunctionArgs) {
 }
 
 function App() {
-	// throw new Error('🐨 Loader error')
+	// throw new Error('Loader error')
 	const data = useLoaderData<typeof loader>()
 	const theme = useTheme()
 	const user = useOptionalUser()
 	const matches = useMatches()
-	// 🐨 use the userHasRole utility to determine if the user is an admin
+	// use the userHasRole utility to determine if the user is an admin
 	const userIsAdmin = userHasRole(user, 'admin')
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 	// console.log(user)
@@ -340,7 +344,7 @@ function Document({
 			<body className="flex h-full flex-col justify-between bg-background text-foreground">
 				{children}
 				{/*
-				🐨 Inline script here using dangerouslySetInnerHTML which
+				Inline script here using dangerouslySetInnerHTML which
 				sets window.ENV to the JSON.stringified value of data.ENV
 			*/}
 				<script
@@ -370,7 +374,7 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 	})
 
 	const mode = userPreference ?? 'light'
-	// 🐨 set the nextMode to the opposite of the current mode
+	// set the nextMode to the opposite of the current mode
 	const nextMode = mode === 'light' ? 'dark' : 'light'
 	const modeLabel = {
 		light: (
@@ -408,22 +412,22 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function LogoutTimer() {
 	const [status, setStatus] = useState<'idle' | 'show-modal'>('idle')
-	// 🐨 bring in the location via useLocation so we can access location.key
-	// 🐨 get a submit function via useSubmit
-	// 🦉 normally you'd want these numbers to be much higher, but for the purpose
+	// bring in the location via useLocation so we can access location.key
+	// get a submit function via useSubmit
+	// normally you'd want these numbers to be much higher, but for the purpose
 	// of this exercise, we'll make it short:
 	const location = useLocation()
 	const submit = useSubmit()
 	const logoutTime = 5000
 	const modalTime = 2000
-	// 🦉 here's what would be more likely:
+	// here's what would be more likely:
 	// const logoutTime = 1000 * 60 * 60;
 	// const modalTime = logoutTime - 1000 * 60 * 2;
 	const modalTimer = useRef<ReturnType<typeof setTimeout>>()
 	const logoutTimer = useRef<ReturnType<typeof setTimeout>>()
 
 	const logout = useCallback(() => {
-		// 🐨 call submit in here. The submit body can be null,
+		// call submit in here. The submit body can be null,
 		// but the requestInit should be method POST and action '/logout'
 		submit(null, { method: 'POST', action: '/logout' })
 	}, [submit])
@@ -441,7 +445,7 @@ function LogoutTimer() {
 		logoutTimer.current = setTimeout(logout, logoutTime)
 	}, [cleanupTimers, logout, logoutTime, modalTime])
 
-	// 🐨 whenever the location changes, we want to reset the timers, so you
+	// whenever the location changes, we want to reset the timers, so you
 	// can add location.key to this array:
 	useEffect(() => resetTimers(), [resetTimers, location.key])
 	useEffect(() => cleanupTimers, [cleanupTimers])

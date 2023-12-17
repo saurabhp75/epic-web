@@ -64,7 +64,7 @@ export async function action({ request }: DataFunctionArgs) {
 
 	const formData = await request.formData()
 
-	// 🐨 validate the token here
+	// validate the token here
 	// send a 403 response if the token is invalid
 	await validateCSRF(formData, request.headers)
 
@@ -93,9 +93,9 @@ export async function action({ request }: DataFunctionArgs) {
 	)
 
 	await prisma.note.delete({ where: { id: note.id } })
-	// 🐨 get the cookie header from the request
-	// 🐨 get the toastCookieSession using the toastSessionStorage.getSession
-	// 🐨 set a 'toast' value on the session with the following toast object:
+	// get the cookie header from the request
+	// get the toastCookieSession using the toastSessionStorage.getSession
+	// set a 'toast' value on the session with the following toast object:
 	// {
 	// 	type: 'success',
 	// 	title: 'Note deleted',
@@ -104,15 +104,15 @@ export async function action({ request }: DataFunctionArgs) {
 	const toastCookieSession = await toastSessionStorage.getSession(
 		request.headers.get('cookie'),
 	)
-	// 🐨 change this to "flash"
+	// change this to "flash"
 	toastCookieSession.flash('toast', {
 		type: 'success',
 		title: 'Note deleted',
 		description: 'Your note has been deleted',
 	})
 	return redirect(`/users/${note.owner.username}/notes`, {
-		// 🐨 add a headers object with a 'set-cookie' property
-		// 🐨 use await toastSessionStorage.commitSession to get the cookie header
+		// add a headers object with a 'set-cookie' property
+		// use await toastSessionStorage.commitSession to get the cookie header
 		headers: {
 			'set-cookie': await toastSessionStorage.commitSession(toastCookieSession),
 		},
@@ -215,10 +215,10 @@ export const meta: MetaFunction<
 	typeof loader,
 	{ 'routes/users+/$username_+/notes': typeof notesLoader }
 > = ({ data, params, matches }) => {
-	// 🐨 use matches to find the route for notes by that ID
-	// 💰 matches.find(m => m.id === 'routes/users+/$username_+/notes')
+	// use matches to find the route for notes by that ID
+	// matches.find(m => m.id === 'routes/users+/$username_+/notes')
 
-	// 🐨 use the data from our loader and our parent's loader to create a title
+	// use the data from our loader and our parent's loader to create a title
 	// and description that show the note title, user's name, and the first part of
 	// the note's content.
 	const notesMatch = matches.find(

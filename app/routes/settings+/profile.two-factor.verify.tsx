@@ -33,18 +33,15 @@ const VerifySchema = z.object({
 export const twoFAVerifyVerificationType = '2fa-verify'
 
 export async function loader({ request }: DataFunctionArgs) {
-
-	
-	
-	// 🐨 create a qrCode of the otpUri (💰 await QRCode.toDataURL(otpUri))
-	// 🐨 send the qrCode and otpUri
+	// create a qrCode of the otpUri (await QRCode.toDataURL(otpUri))
+	// send the qrCode and otpUri
 	const userId = await requireUserId(request)
-	// 🐨 find the user's verification based on the twoFAVerifyVerificationType and the target being the userId
+	// find the user's verification based on the twoFAVerifyVerificationType and the target being the userId
 	const verification = await prisma.verification.findUnique({
 		where: {
 			target_type: { type: twoFAVerifyVerificationType, target: userId },
 		},
-		// 🐨 select the id, algorithm, secret, period, and digits
+		// select the id, algorithm, secret, period, and digits
 		select: {
 			id: true,
 			algorithm: true,
@@ -53,23 +50,24 @@ export async function loader({ request }: DataFunctionArgs) {
 			digits: true,
 		},
 	})
-	// 🐨 if there's no verification, redirect to '/settings/profile/two-factor'
+	// if there's no verification, redirect to '/settings/profile/two-factor'
 	if (!verification) {
 		return redirect('/settings/profile/two-factor')
 	}
-	// 🐨 you can use the user's email for the account name
+	// you can use the user's email for the account name
 	const user = await prisma.user.findUniqueOrThrow({
 		where: { id: userId },
 		select: { email: true },
 	})
 	const issuer = new URL(getDomainUrl(request)).host
-	// 🐨 create the otpUri from getTOTPAuthUri from '@epic-web/totp'
+	// create the otpUri from getTOTPAuthUri from '@epic-web/totp'
 	const otpUri = getTOTPAuthUri({
 		...verification,
 		accountName: user.email,
 		issuer,
 	})
 	const qrCode = await QRCode.toDataURL(otpUri)
+
 	return json({ otpUri, qrCode })
 }
 
@@ -87,7 +85,7 @@ export async function action({ request }: DataFunctionArgs) {
 	const submission = await parse(formData, {
 		schema: () =>
 			VerifySchema.superRefine(async (data, ctx) => {
-				// 🐨 determine whether the code is valid using the isCodeValid util from
+				// determine whether the code is valid using the isCodeValid util from
 				// '#app/routes/_auth+/verify.tsx'
 				const codeIsValid = await isCodeValid({
 					code: data.code,
@@ -114,8 +112,8 @@ export async function action({ request }: DataFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	// 🐨 update the verification from the twoFAVerifyVerifycationType to the twoFAVerificationType
-	// 🐨 set the expiresAt to null! This should never expire.
+	// update the verification from the twoFAVerifyVerifycationType to the twoFAVerificationType
+	// set the expiresAt to null! This should never expire.
 	await prisma.verification.update({
 		where: {
 			target_type: { type: twoFAVerifyVerificationType, target: userId },

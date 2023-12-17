@@ -8,8 +8,8 @@ import { sessionStorage } from './session.server'
 
 export { bcrypt }
 
-// 🐨 create a SESSION_EXPIRATION_TIME variable here
-// 🐨 export a simple function that returns a new date that's the current time plus the SESSION_EXPIRATION_TIME
+// create a SESSION_EXPIRATION_TIME variable here
+// export a simple function that returns a new date that's the current time plus the SESSION_EXPIRATION_TIME
 const SESSION_EXPIRATION_TIME = 1000 * 60 * 60 * 24 * 30
 export const getSessionExpirationDate = () =>
 	new Date(Date.now() + SESSION_EXPIRATION_TIME)
@@ -24,9 +24,9 @@ export async function getUserId(request: Request) {
 	const sessionId = cookieSession.get(sessionKey)
 	if (!sessionId) return null
 
-	// 🐨 query the sessionId table instead. Do a subquery to get the user id
-	// 💰 make sure to only select sessions that have not yet expired!
-	// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#gt
+	// query the sessionId table instead. Do a subquery to get the user id
+	// make sure to only select sessions that have not yet expired!
+	// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#gt
 	const session = await prisma.session.findUnique({
 		select: { userId: true },
 		where: { id: sessionId },
@@ -36,10 +36,6 @@ export async function getUserId(request: Request) {
 	}
 	return session.userId
 }
-
-// 🐨 create a function called `requireAnonymous` here that takes a request
-// 🐨 get the user's Id from the session using getUserId
-// 🐨 if there's a userId, then throw a redirect to '/' (otherwise do nothing)
 
 export async function login({
 	username,
@@ -52,7 +48,7 @@ export async function login({
 
 	if (!user) return null
 	const session = await prisma.session.create({
-		select: { id: true, expirationDate: true },
+		select: { id: true, expirationDate: true, userId: true },
 		data: {
 			expirationDate: getSessionExpirationDate(),
 			userId: user.id,
@@ -61,9 +57,9 @@ export async function login({
 	return session
 }
 
-// 🐨 add a resetUserPassword function which accepts a username and password
-// 🐨 hash the password using bcrypt
-// 🐨 then update the password by the username
+// resetUserPassword function which accepts a username and password
+// hash the password using bcrypt
+// then update the password by the username
 export async function resetUserPassword({
 	username,
 	password,
@@ -134,11 +130,11 @@ export async function logout(
 		request.headers.get('cookie'),
 	)
 
-	// 🐨 get the sessionId from the cookieSession
-	// 🐨 delete the session from the database by that sessionId
-	// 💯 it's possible the session doesn't exist, so handle that case gracefully
+	// get the sessionId from the cookieSession
+	// delete the session from the database by that sessionId
+	// it's possible the session doesn't exist, so handle that case gracefully
 	// and make sure we don't prevent the user from logging out if that happens
-	// 💯 don't wait for the session to be deleted before proceeding with the logout
+	// don't wait for the session to be deleted before proceeding with the logout
 	const sessionId = cookieSession.get(sessionKey)
 	// delete the session if it exists, but don't wait for it, go ahead an log the user out
 	// Ignore the errors
@@ -216,13 +212,13 @@ export async function requireUserId(
 ) {
 	const userId = await getUserId(request)
 	if (!userId) {
-		// 🐨 create a URL object with new URL(request.url)
-		// 🐨 if redirectTo was passed as an argument we'll just use that, otherwise
-		// 🐨 create the path to redirectTo by combining the url's pathname and search
-		// 🐨 construct the login redirect path so it ends up being something like
+		// create a URL object with new URL(request.url)
+		// if redirectTo was passed as an argument we'll just use that, otherwise
+		// create the path to redirectTo by combining the url's pathname and search
+		// construct the login redirect path so it ends up being something like
 		// this: '/login?redirectTo=/protected/path'
-		// 💯 don't include the redirectTo if it's null
-		// 🐨 update this redirect to use your loginRedirect
+		// don't include the redirectTo if it's null
+		// update this redirect to use your loginRedirect
 		const requestUrl = new URL(request.url)
 		redirectTo =
 			redirectTo === null

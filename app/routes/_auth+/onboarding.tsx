@@ -81,6 +81,7 @@ export async function action({ request }: DataFunctionArgs) {
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	checkHoneypot(formData)
+
 	const submission = await parse(formData, {
 		schema: SignupFormSchema.superRefine(async (data, ctx) => {
 			const existingUser = await prisma.user.findUnique({
@@ -116,14 +117,13 @@ export async function action({ request }: DataFunctionArgs) {
 	)
 	cookieSession.set(sessionKey, session.id)
 
-	// 🦉 you're going to need to set two cookies, one to get the user logged in
+	// you're going to need to set two cookies, one to get the user logged in
 	// and the other to destroy the verifySession. You can do this using the
 	// headers object
-	// 🐨 get the user's verifySession
-	// 🐨 create a new headers object: (💰 new Headers())
-	// 🐨 use headers.append to add the first 'set-cookie' header
-	// 🐨 use headers.append to add the second 'set-cookie' header
-	// 💰 the order doesn't matter
+	// get the user's verifySession
+	// create a new headers object: (new Headers())
+	// use headers.append to add the first 'set-cookie' header
+	// use headers.append to add the second 'set-cookie' header
 
 	const verifySession = await verifySessionStorage.getSession(
 		request.headers.get('cookie'),

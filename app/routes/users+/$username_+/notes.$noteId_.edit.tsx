@@ -142,7 +142,7 @@ export async function action({ request, params }: DataFunctionArgs) {
 		async: true,
 	})
 
-	// 🐨 If the submission.intent is not "submit" then return the submission with
+	// If the submission.intent is not "submit" then return the submission with
 	// a status of 'idle' and the submission.
 	// when will this usecase happen?
 	if (submission.intent !== 'submit') {
@@ -156,7 +156,7 @@ export async function action({ request, params }: DataFunctionArgs) {
 
 	const { title, content, imageUpdates = [], newImages = [] } = submission.value
 
-	// 🐨 Update the note's title and content
+	// Update the note's title and content
 	await prisma.note.update({
 		select: { id: true },
 		where: { id: params.noteId },
@@ -164,27 +164,27 @@ export async function action({ request, params }: DataFunctionArgs) {
 			title,
 			content,
 			images: {
-				// 🐨 use deleteMany on the noteImage to delete all images where:
+				// use deleteMany on the noteImage to delete all images where:
 				// - their noteId is the params.noteId
 				// - their id is not in the imageUpdates array (💰 imageUpdates.map(i => i.id))
-				//   📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#notin
-				//   📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#deletemany
+				// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#notin
+				// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#deletemany
 				deleteMany: { id: { notIn: imageUpdates.map(i => i.id) } },
-				// 🐨 iterate all the imageUpdates and update the image.
-				// 💯 If there's a blob, then set the id to a new cuid() (💰 check the imports above)
+				// iterate all the imageUpdates and update the image.
+				// If there's a blob, then set the id to a new cuid() (💰 check the imports above)
 				// so we handle caching properly.
 				updateMany: imageUpdates.map(updates => ({
 					where: { id: updates.id },
 					data: { ...updates, id: updates.blob ? cuid() : updates.id },
 				})),
-				// 🐨 iterate over the newImages and create a new noteImage for each one.
+				// iterate over the newImages and create a new noteImage for each one.
 				create: newImages,
 			},
 		},
 	})
 
 	// Throw the error and confirm that the transaction rolled back
-	// throw new Error('Gotcha 🧝‍♂️, https://kcd.im/promises')
+	// throw new Error('Gotcha, https://kcd.im/promises')
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
@@ -211,7 +211,7 @@ export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
 
-	// 🐨 determine whether this form is submitting
+	// determine whether this form is submitting
 	const isSubmitting = useIsSubmitting()
 
 	const [form, fields] = useForm({
@@ -321,7 +321,7 @@ function ImageChooser({
 }: {
 	config: FieldConfig<z.infer<typeof ImageFieldsetSchema>>
 }) {
-	// 🐨 the existingImage should now be based on whether fields.id.defaultValue is set
+	// the existingImage should now be based on whether fields.id.defaultValue is set
 	const ref = useRef<HTMLFieldSetElement>(null)
 	const fields = useFieldset(ref, config)
 	const existingImage = Boolean(fields.id.defaultValue)

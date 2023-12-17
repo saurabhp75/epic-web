@@ -6,7 +6,9 @@
   "scripts": {
     "build": "remix build",
     "dev": "remix dev -c \"node ./server/dev-server.js\" --manual",
+    "debug": "NODE_OPTIONS=\"--inspect\" remix dev -c \"node ./server/dev-server.js\" --manual",
     "start": "remix-serve ./build/index.js",
+    "clean": "rm -rf build public/build",
     "typecheck": "tsc"
   },
   "prisma": {

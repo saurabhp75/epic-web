@@ -21,6 +21,7 @@ import { handleVerification as handleResetPasswordVerification } from './reset-p
 import { handleVerification as handleChangeEmailVerification } from '#app/routes/settings+/profile.change-email'
 import type { twoFAVerifyVerificationType } from '../settings+/profile.two-factor.verify'
 // import { onboardingEmailSessionKey } from './onboarding'
+import { handleVerification as handleLoginTwoFactorVerification } from './login'
 
 export const codeQueryParam = 'code'
 export const targetQueryParam = 'target'
@@ -94,12 +95,16 @@ export async function prepareVerification({
 	target: string
 	redirectTo?: string
 }) {
+	// verifyUrl will contain "code" as search param along with
+	// other params ("type", "target") and is emailed to the user.
 	const verifyUrl = getRedirectToUrl({
 		request,
 		type,
 		target,
 		redirectTo: postVerificationRedirectTo,
 	})
+	// redirectTo contains "type", "target" as search params and
+	// is used to redirect the user to prompt for the code.
 	const redirectTo = new URL(verifyUrl.toString())
 
 	const { otp, ...verificationConfig } = generateTOTP({
@@ -137,7 +142,7 @@ export async function isCodeValid({
 	target,
 }: {
 	code: string
-	// 🐨 add | typeof twoFAVerifyVerificationType from '../settings+/profile.two-factor.verify.tsx'
+	// add | typeof twoFAVerifyVerificationType from '../settings+/profile.two-factor.verify.tsx'
 	// 🦉 we're not adding that type to the valid types in general because it's a temporary type
 	type: VerificationTypes | typeof twoFAVerifyVerificationType
 	target: string
@@ -170,11 +175,11 @@ async function validateRequest(
 		schema: () =>
 			VerifySchema.superRefine(async (data, ctx) => {
 				// console.log('verify this', data)
-				// 🐨 retrieve the verification secret, period, digits, charSet, and algorithm
+				// retrieve the verification secret, period, digits, charSet, and algorithm
 				// by the target and type and ensure it's not expired
-				// 🐨 if there's no verification, then add an issue to the code field
-				// that it's invalid (similar to the one below)
-				// 🐨 set codeIsValid to the result of calling verifyTOTP (from '@epic-web/totp')
+				// if there's no verification, then add an issue to the code field
+				// that it's invalid
+				// set codeIsValid to the result of calling verifyTOTP (from '@epic-web/totp')
 				// with the verification config and the otp from the submitted data
 				const codeIsValid = await isCodeValid({
 					code: data[codeQueryParam],
@@ -203,30 +208,32 @@ async function validateRequest(
 
 	const { value: submissionValue } = submission
 
-	await prisma.verification.delete({
-		where: {
-			target_type: {
-				target: submissionValue[targetQueryParam],
-				type: submissionValue[typeQueryParam],
+	async function deleteVerification() {
+		await prisma.verification.delete({
+			where: {
+				target_type: {
+					type: submissionValue[typeQueryParam],
+					target: submissionValue[targetQueryParam],
+				},
 			},
-		},
-	})
+		})
+	}
 
 	switch (submissionValue[typeQueryParam]) {
-		// 🐨 add 'reset-password' case to this switch statement
-		// and call the handler in ./reset-password.tsx file
 		case 'reset-password': {
+			await deleteVerification()
 			return handleResetPasswordVerification({ request, body, submission })
 		}
 		case 'onboarding': {
+			await deleteVerification()
 			return handleOnboardingVerification({ request, body, submission })
 		}
 		case 'change-email': {
+			await deleteVerification()
 			return handleChangeEmailVerification({ request, body, submission })
 		}
-		// you can just throw an error for now, we'll get to this next...
 		case '2fa': {
-			throw new Error('not yet implemented')
+			return handleLoginTwoFactorVerification({ request, body, submission })
 		}
 	}
 }

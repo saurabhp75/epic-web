@@ -12,14 +12,14 @@ import { singleton } from './singleton.server'
 import { PrismaClient } from '@prisma/client'
 import chalk from 'chalk'
 
-//   🐨 create the prisma client.
-//   🐨 configure it to emit an event for the query log and use 'stdout' for other log levels
-//     📜 (https://www.prisma.io/docs/concepts/components/prisma-client/working-with-prismaclient/logging)
-//   🐨 listen to the 'query' event
-//   🐨 log out the event.duration and event.query
-//   💯 If you've got extra time, add a logThreshold that will prevent the log
+// create the prisma client.
+// configure it to emit an event for the query log and use 'stdout' for other log levels
+// (https://www.prisma.io/docs/concepts/components/prisma-client/working-with-prismaclient/logging)
+// listen to the 'query' event
+// log out the event.duration and event.query
+// If you've got extra time, add a logThreshold that will prevent the log
 //     from appearing if the query is fast enough (like 1ms)
-//   💯 If you have even more extra time, you can colorize the output to make
+// If you have even more extra time, you can colorize the output to make
 //     extra-slow queries more obvious. We have the "chalk" package installed
 //     already.
 
@@ -62,7 +62,6 @@ const prisma = singleton('prisma', () => {
 
 // 🦉 If you want to test things out before moving on, go ahead and uncomment this:
 // console.log(await prisma.user.findMany())
-// The run the app and you should see the query log in the console.
 
 export { prisma }
 

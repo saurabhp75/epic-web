@@ -7,23 +7,64 @@ import { requireUserId } from '#app/utils/auth.server'
 import { validateCSRF } from '#app/utils/csrf.server'
 import { useDoubleCheck, useIsPending } from '#app/utils/misc'
 import { redirectWithToast } from '#app/utils/toast.server'
+import { prisma } from '#app/utils/db.server'
+import { twoFAVerificationType } from './profile.two-factor'
+import { getRedirectToUrl } from '../_auth+/verify'
+import { shouldRequestTwoFA } from '../_auth+/login'
 
 export const handle = {
 	breadcrumb: <Icon name="lock-open-1">Disable</Icon>,
 }
 
+export async function requireRecentVerification({
+	request,
+	userId,
+}: {
+	request: Request
+	userId: string
+}) {
+	const shouldReverify = await shouldRequestTwoFA({ request, userId })
+
+	// if we should reverify, then get a verification URL and redirect
+	if (shouldReverify) {
+		const reqUrl = new URL(request.url)
+		const redirectUrl = getRedirectToUrl({
+			request,
+			target: userId,
+			type: twoFAVerificationType,
+			redirectTo: reqUrl.pathname + reqUrl.search,
+		})
+		throw await redirectWithToast(redirectUrl.toString(), {
+			title: 'Please Reverify',
+			description: 'Please reverify your account before proceeding',
+		})
+	}
+}
+
 export async function loader({ request }: DataFunctionArgs) {
-	await requireUserId(request)
+	await requireRecentVerification({
+		request,
+		userId: await requireUserId(request),
+	})
 	return json({})
 }
 
 export async function action({ request }: DataFunctionArgs) {
-	await requireUserId(request)
+	const userId = await requireUserId(request)
+
+	await requireRecentVerification({ request, userId })
+
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
+
+	await prisma.verification.delete({
+		where: { target_type: { target: userId, type: twoFAVerificationType } },
+	})
+
 	throw await redirectWithToast('/settings/profile/two-factor', {
-		title: '2FA Disabled (jk)',
-		description: 'This has not yet been implemented',
+		title: '2FA Disabled',
+		type: 'success',
+		description: 'Two factor authentication has been disabled.',
 	})
 }
 

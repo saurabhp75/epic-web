@@ -74,9 +74,9 @@ const NoteEditorSchema = z.object({
 })
 
 export async function action({ request, params }: DataFunctionArgs) {
-	// 🐨 require the user and check that the user.username is equal to params.username.
+	// require the user and check that the user.username is equal to params.username.
 	// If not, then throw a 403 response
-	// 💰 you can use invariantResponse for this.
+	// you can use invariantResponse for this.
 	const user = await requireUser(request)
 	invariantResponse(user.username === params.username, 'Not authorized', {
 		status: 403,

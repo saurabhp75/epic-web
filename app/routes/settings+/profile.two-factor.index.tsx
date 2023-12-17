@@ -12,13 +12,13 @@ import { prisma } from '#app/utils/db.server'
 import { twoFAVerificationType } from './profile.two-factor'
 
 export async function loader({ request }: DataFunctionArgs) {
-	// 🐨 determine whether the user has 2fa
+	// determine whether the user has 2fa
 	const userId = await requireUserId(request)
 	const verification = await prisma.verification.findUnique({
 		where: { target_type: { type: twoFAVerificationType, target: userId } },
 		select: { id: true },
 	})
-	// 🐨 Set isTwoFAEnabled to true if user has 2fa
+	// Set isTwoFAEnabled to true if user has 2fa
 	return json({ isTwoFAEnabled: Boolean(verification) })
 }
 
@@ -26,18 +26,16 @@ export async function action({ request }: DataFunctionArgs) {
 	const userId = await requireUserId(request)
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
-	// 🐨 generate the otp config with generateTOTP (you don't need the otp that's returned, just the config)
+	// generate the otp config with generateTOTP (you don't need the otp that's returned, just the config)
 	const { otp: _otp, ...config } = generateTOTP()
 	const verificationData = {
 		...config,
-		// 🐨 the type should be twoFAVerifyVerificationType which you can get from './profile.two-factor.verify.tsx'
 		type: twoFAVerifyVerificationType,
-		// 🐨 the target should be the userId
 		target: userId,
-		// 🐨 Set the expiresAt to 10 minutes from now
+		// Set the expiresAt to 10 minutes from now
 		expiresAt: new Date(Date.now() + 1000 * 60 * 10),
 	}
-	// 🐨 upsert the verification with the config.
+	// upsert the verification with the config.
 	await prisma.verification.upsert({
 		where: {
 			target_type: { target: userId, type: twoFAVerifyVerificationType },

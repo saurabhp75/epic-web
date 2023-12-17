@@ -37,10 +37,10 @@ export async function loader({ request }: DataFunctionArgs) {
 			image: {
 				select: { id: true },
 			},
-			// 🐨 add a count of the number of sessions for this user
-			// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#select-a-_count-of-relations
-			// 💰 also only select those which have not yet expired!
-			// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#gt
+			// add a count of the number of sessions for this user
+			// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#select-a-_count-of-relations
+			// also only select those which have not yet expired!
+			// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#gt
 			_count: {
 				select: {
 					sessions: {
@@ -53,9 +53,9 @@ export async function loader({ request }: DataFunctionArgs) {
 		},
 	})
 
-	// 🐨 determine whether the user has 2fa by checking for a verification and
+	// determine whether the user has 2fa by checking for a verification and
 	// by the type twoFAVerifyVerificationType and the target being the userId.
-	// 🐨 Set isTwoFAEnabled to true if it exists.
+	// Set isTwoFAEnabled to true if it exists.
 	const twoFactorVerification = await prisma.verification.findUnique({
 		select: { id: true },
 		where: { target_type: { type: twoFAVerificationType, target: userId } },
@@ -262,9 +262,9 @@ function UpdateProfile() {
 }
 
 async function signOutOfSessionsAction({ request, userId }: ProfileActionArgs) {
-	// 🐨 get the sessionId from the cookieSession (you'll need to use getSession for this)
-	// 🐨 delete all the sessions that are not the current session
-	// 📜 https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#not
+	// get the sessionId from the cookieSession (you'll need to use getSession for this)
+	// delete all the sessions that are not the current session
+	// https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#not
 	const cookieSession = await sessionStorage.getSession(
 		request.headers.get('cookie'),
 	)
@@ -284,7 +284,7 @@ async function signOutOfSessionsAction({ request, userId }: ProfileActionArgs) {
 }
 
 function SignOutOfSessions() {
-	// 🐨 get the loader data using useLoaderData
+	// get the loader data using useLoaderData
 	const data = useLoaderData<typeof loader>()
 	const dc = useDoubleCheck()
 

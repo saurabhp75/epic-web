@@ -2,8 +2,8 @@ import { Outlet } from '@remix-run/react'
 import { Icon } from '#app/components/ui/icon'
 import { type VerificationTypes } from '#app/routes/_auth+/verify'
 
-// 🐨 export a twoFAVerificationType constant set to '2fa'
-// 🦺 make it type-safer by adding "satisifes VerificationTypes"
+// export a twoFAVerificationType constant set to '2fa'
+// make it type-safer by adding "satisifes VerificationTypes"
 export const twoFAVerificationType = '2fa' satisfies VerificationTypes
 
 export const handle = {
