@@ -20,6 +20,7 @@ import { invariant, useIsPending } from '#app/utils/misc'
 import { EmailSchema } from '#app/utils/user-validation'
 import { verifySessionStorage } from '#app/utils/verification.server'
 import { redirectWithToast } from '#app/utils/toast.server'
+import { requireRecentVerification } from './profile.two-factor.disable'
 
 export const handle = {
 	breadcrumb: <Icon name="envelope-closed">Change Email</Icon>,
@@ -82,6 +83,7 @@ const ChangeEmailSchema = z.object({
 
 export async function loader({ request }: DataFunctionArgs) {
 	const userId = await requireUserId(request)
+	await requireRecentVerification({ request, userId })
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: { email: true },
@@ -95,6 +97,7 @@ export async function loader({ request }: DataFunctionArgs) {
 
 export async function action({ request }: DataFunctionArgs) {
 	const userId = await requireUserId(request)
+	await requireRecentVerification({ request, userId })
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	const submission = await parse(formData, {

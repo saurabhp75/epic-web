@@ -143,7 +143,7 @@ export async function isCodeValid({
 }: {
 	code: string
 	// add | typeof twoFAVerifyVerificationType from '../settings+/profile.two-factor.verify.tsx'
-	// 🦉 we're not adding that type to the valid types in general because it's a temporary type
+	// we're not adding that type to the valid types in general because it's a temporary type
 	type: VerificationTypes | typeof twoFAVerifyVerificationType
 	target: string
 }) {

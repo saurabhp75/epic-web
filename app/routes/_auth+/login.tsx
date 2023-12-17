@@ -35,8 +35,6 @@ export async function handleVerification({
 	request,
 	submission,
 }: VerifyFunctionArgs) {
-	// console.log('login:handleVerification called')
-
 	invariant(submission.value, 'Submission should have a value by this point')
 
 	const cookieSession = await sessionStorage.getSession(
