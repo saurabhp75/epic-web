@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import { promiseHash } from 'remix-utils/promise'
 import { UniqueEnforcer } from 'enforce-unique'
 import { createPassword } from '#tests/db-utils'
+import { insertGitHubUser } from '#tests/mocks/github'
 
 const prisma = new PrismaClient()
 
@@ -189,6 +190,12 @@ async function seed() {
 		}),
 	})
 
+	// create a githubUser here with the insertGitHubUser function.
+	// Set the "code" argument to "MOCK_GITHUB_CODE_KODY"
+	const githubUser = await insertGitHubUser('MOCK_GITHUB_CODE_KODY', {
+		primaryEmailAddress: 'kody@kcd.dev',
+	})
+
 	await prisma.user.create({
 		// add a select to just get the ID so we're not pulling back the
 		// entire user object.
@@ -200,6 +207,10 @@ async function seed() {
 			// add Kody's profile image here (kodyImages.kodyUser)
 			image: { create: kodyImages.kodyUser },
 			password: { create: createPassword('kodylovesyou') },
+			// 🐨 add a nested connections create here to connect kody to the githubUser
+			connections: {
+				create: { providerName: 'github', providerId: githubUser.profile.id },
+			},
 			// connect the admin and user roles to this user
 			roles: { connect: [{ name: 'admin' }, { name: 'user' }] },
 			notes: {
