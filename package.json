@@ -52,6 +52,8 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "redux-tooltip": "^0.7.3",
+    "remix-auth": "^3.6.0",
+    "remix-auth-socials": "^2.0.5",
     "remix-utils": "^7.3.0",
     "sonner": "^1.2.4",
     "spin-delay": "^1.2.0",
