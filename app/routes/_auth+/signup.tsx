@@ -22,6 +22,7 @@ import { EmailSchema } from '#app/utils/user-validation'
 import { sendEmail } from '#app/utils/email.server'
 import { prepareVerification } from './verify'
 import { useIsPending } from '#app/utils/misc'
+import { ProviderConnectionForm } from '#app/utils/connections'
 // import { verifySessionStorage } from '#app/utils/verification.server'
 // import { onboardingEmailSessionKey } from './onboarding'
 
@@ -182,6 +183,9 @@ export default function SignupRoute() {
 						Submit
 					</StatusButton>
 				</Form>
+				<div className="mt-5 flex flex-col gap-5 border-b-2 border-t-2 border-border py-3">
+					<ProviderConnectionForm type="Signup" providerName="github" />
+				</div>
 			</div>
 		</div>
 	)
