@@ -1,17 +1,26 @@
-import { type DataFunctionArgs } from '@remix-run/node'
+import { type LoaderFunctionArgs } from '@remix-run/node'
 import { authenticator } from '#app/utils/auth.server'
 import { ProviderNameSchema, providerLabels } from '#app/utils/connections'
 import { redirectWithToast } from '#app/utils/toast.server'
 
-export async function loader({ request, params }: DataFunctionArgs) {
+export async function loader({ request, params }: LoaderFunctionArgs) {
 	const providerName = ProviderNameSchema.parse(params.provider)
 
 	const label = providerLabels[providerName]
 
-	const profile = await authenticator.authenticate(providerName, request, {
-		throwOnError: true,
-	})
-	// 🐨 handle the error thrown by logging the error and redirecting the user
+	const profile = await authenticator
+		.authenticate(providerName, request, {
+			throwOnError: true,
+		})
+		.catch(async error => {
+			console.error(error)
+			throw await redirectWithToast('/login', {
+				type: 'error',
+				title: 'Auth Failed',
+				description: `There was an error authenticating with ${label}.`,
+			})
+		})
+	// handle the error thrown by logging the error and redirecting the user
 	// to the login page with a toast message indicating that there was an error
 	// authenticating with the provider.
 
