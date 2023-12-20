@@ -26,7 +26,6 @@ import { verifySessionStorage } from '#app/utils/verification.server'
 import { prisma } from '#app/utils/db.server'
 import { redirectWithToast } from '#app/utils/toast.server'
 import { twoFAVerificationType } from '../settings+/profile.two-factor'
-import { sendEmail } from '#app/utils/email.server'
 import { generateTOTP } from '@epic-web/totp'
 import * as E from '@react-email/components'
 import { ProviderConnectionForm } from '#app/utils/connections'
@@ -34,6 +33,62 @@ import { ProviderConnectionForm } from '#app/utils/connections'
 const verifiedTimeKey = 'verified-time'
 const unverifiedSessionIdKey = 'unverified-session-id'
 const rememberKey = 'remember-me'
+
+// 🐨 you can export a handleNewSession function here, you'll get its contents
+// from the action below.
+// 🐨 it should take a request, session, redirectTo, and remember
+export async function handleNewSession({
+	request,
+	session,
+	redirectTo,
+	remember = false,
+}: {
+	request: Request
+	session: { userId: string; id: string; expirationDate: Date }
+	redirectTo?: string
+	remember?: boolean
+}) {
+	if (await shouldRequestTwoFA({ request, userId: session.userId })) {
+		const verifySession = await verifySessionStorage.getSession()
+		verifySession.set(unverifiedSessionIdKey, session.id)
+		verifySession.set(rememberKey, remember)
+
+		// get verification details from db
+		// get otp from verification details and log it (remove it in)
+		const twoFactorVerification = await prisma.verification.findUnique({
+			select: { secret: true, algorithm: true, digits: true, period: true },
+			where: {
+				target_type: { type: twoFAVerificationType, target: session.userId },
+			},
+		})
+		const { otp } = generateTOTP({ ...twoFactorVerification })
+		console.log({ otp })
+
+		const redirectUrl = getRedirectToUrl({
+			request,
+			type: twoFAVerificationType,
+			target: session.userId,
+		})
+		return redirect(redirectUrl.toString(), {
+			headers: {
+				'set-cookie': await verifySessionStorage.commitSession(verifySession),
+			},
+		})
+	} else {
+		const cookieSession = await sessionStorage.getSession(
+			request.headers.get('cookie'),
+		)
+		cookieSession.set(sessionKey, session.id)
+
+		return redirect(safeRedirect(redirectTo), {
+			headers: {
+				'set-cookie': await sessionStorage.commitSession(cookieSession, {
+					expires: remember ? session.expirationDate : undefined,
+				}),
+			},
+		})
+	}
+}
 
 export async function handleVerification({
 	request,
@@ -188,69 +243,7 @@ export async function action({ request }: DataFunctionArgs) {
 	// get the user from the submission.value
 	const { session, remember, redirectTo } = submission.value
 
-	if (await shouldRequestTwoFA({ request, userId: session.userId })) {
-		const verifySession = await verifySessionStorage.getSession()
-		verifySession.set(unverifiedSessionIdKey, session.id)
-		verifySession.set(rememberKey, remember)
-
-		// get verification details from db
-		const twoFactorVerification = await prisma.verification.findUnique({
-			select: { secret: true, algorithm: true, digits: true, period: true },
-			where: {
-				target_type: { type: twoFAVerificationType, target: session.userId },
-			},
-		})
-
-		// get otp from verification details
-		const { otp } = generateTOTP({ ...twoFactorVerification })
-
-		// get the user's email from db
-		const user = await prisma.user.findUniqueOrThrow({
-			where: { id: session.userId },
-			select: { id: true, email: true },
-		})
-
-		// send an email with otp
-		const response = await sendEmail({
-			to: user.email,
-			subject: `OTP for Epic Notes login`,
-			react: <LoginEmail otp={otp} />,
-		})
-
-		if (response.status === 'success') {
-			const redirectUrl = getRedirectToUrl({
-				request,
-				type: twoFAVerificationType,
-				target: session.userId,
-			})
-			return redirect(redirectUrl.toString(), {
-				headers: {
-					'set-cookie': await verifySessionStorage.commitSession(verifySession),
-				},
-			})
-		} else {
-			submission.error[''] = [response.error.message]
-			return json({ status: 'error', submission } as const, { status: 500 })
-		}
-	} else {
-		const cookieSession = await sessionStorage.getSession(
-			request.headers.get('cookie'),
-		)
-		cookieSession.set(sessionKey, session.id)
-
-		// update this redirect to add a 'set-cookie' header to the result of
-		// commitSession with the session value you're working with
-		return redirect(safeRedirect(redirectTo), {
-			headers: {
-				// add an expires option to this commitSession call and set it to
-				// a date 30 days in the future if they checked the remember checkbox
-				// or undefined if they did not.
-				'set-cookie': await sessionStorage.commitSession(cookieSession, {
-					expires: remember ? session.expirationDate : undefined,
-				}),
-			},
-		})
-	}
+	return handleNewSession({ request, session, remember, redirectTo })
 }
 
 export function LoginEmail({ otp }: { otp: string }) {

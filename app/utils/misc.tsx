@@ -161,7 +161,7 @@ export function invariantResponse(
 			typeof message === 'function'
 				? message()
 				: message ||
-				  'An invariant failed, please provide a message to explain why.',
+					'An invariant failed, please provide a message to explain why.',
 			{ status: 400, ...responseInit },
 		)
 	}
@@ -271,7 +271,6 @@ function callAll<Args extends Array<unknown>>(
 	return (...args: Args) => fns.forEach(fn => fn?.(...args))
 }
 
-
 /**
  * Use this hook with a button and it will make it so the first click sets a
  * `doubleCheck` state to true, and the second click will actually trigger the
@@ -293,7 +292,7 @@ export function useDoubleCheck() {
 				: e => {
 						e.preventDefault()
 						setDoubleCheck(true)
-				  }
+					}
 
 		const onKeyUp: React.ButtonHTMLAttributes<HTMLButtonElement>['onKeyUp'] =
 			e => {
@@ -347,4 +346,20 @@ export function useDebounce<
 			),
 		[delay],
 	)
+}
+
+export async function downloadFile(url: string, retries: number = 0) {
+	const MAX_RETRIES = 3
+	try {
+		const response = await fetch(url)
+		if (!response.ok) {
+			throw new Error(`Failed to fetch image with status ${response.status}`)
+		}
+		const contentType = response.headers.get('content-type') ?? 'image/jpg'
+		const blob = Buffer.from(await response.arrayBuffer())
+		return { contentType, blob }
+	} catch (e) {
+		if (retries > MAX_RETRIES) throw e
+		return downloadFile(url, retries + 1)
+	}
 }

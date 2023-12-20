@@ -34,5 +34,41 @@
       }
     ],
     "primaryEmail": "kody@kcd.dev"
+  },
+  {
+    "code": "MOCK_GITHUB_CODE_HANNAH",
+    "accessToken": "MOCK_GITHUB_CODE_HANNAH_mock_access_token",
+    "profile": {
+      "login": "Oleta92",
+      "id": "MOCK_GITHUB_CODE_HANNAH_profile_id",
+      "name": "Alonzo Brown-Mayer",
+      "avatar_url": "https://github.com/ghost.png",
+      "emails": [
+        "Rogers.Goldner@yahoo.com",
+        "Janae20@hotmail.com",
+        "Jacquelyn.Kunde@hotmail.com"
+      ]
+    },
+    "emails": [
+      {
+        "email": "Rogers.Goldner@yahoo.com",
+        "verified": false,
+        "primary": false,
+        "visibility": "public"
+      },
+      {
+        "email": "Janae20@hotmail.com",
+        "verified": true,
+        "primary": false,
+        "visibility": null
+      },
+      {
+        "email": "Jacquelyn.Kunde@hotmail.com",
+        "verified": true,
+        "primary": true,
+        "visibility": null
+      }
+    ],
+    "primaryEmail": "Jacquelyn.Kunde@hotmail.com"
   }
 ]

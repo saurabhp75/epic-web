@@ -1,13 +1,14 @@
-import { type User, type Password } from '@prisma/client'
+import type { Connection, User, Password } from '@prisma/client'
 import { redirect } from '@remix-run/node'
 import bcrypt from 'bcryptjs'
 import { Authenticator } from 'remix-auth'
 import { prisma } from './db.server'
-import { combineResponseInits } from './misc'
+import { combineResponseInits, downloadFile } from './misc'
 import { safeRedirect } from 'remix-utils/safe-redirect'
 import { sessionStorage } from './session.server'
 import { connectionSessionStorage, providers } from './connections.server'
 import type { ProviderUser } from './providers/provider'
+import { type ProviderName } from './connections'
 
 export { bcrypt }
 
@@ -121,6 +122,48 @@ export async function signup({
 				},
 			},
 		},
+	})
+
+	return session
+}
+
+// add a signupWithConnection which takes: email, username, name, providerId, providerName, imageUrl
+// Follow the example of signup above, except:
+// - no password to create
+// - nested create for the connection
+// - if there's an imageUrl, you can create one using downloadFile(imageUrl)
+export async function signupWithConnection({
+	email,
+	username,
+	name,
+	providerId,
+	providerName,
+	imageUrl,
+}: {
+	email: User['email']
+	username: User['username']
+	name: User['name']
+	providerId: Connection['providerId']
+	providerName: ProviderName
+	imageUrl?: string
+}) {
+	const session = await prisma.session.create({
+		data: {
+			expirationDate: getSessionExpirationDate(),
+			user: {
+				create: {
+					email: email.toLowerCase(),
+					username: username.toLowerCase(),
+					name,
+					roles: { connect: { name: 'user' } },
+					connections: { create: { providerId, providerName } },
+					image: imageUrl
+						? { create: await downloadFile(imageUrl) }
+						: undefined,
+				},
+			},
+		},
+		select: { id: true, expirationDate: true },
 	})
 
 	return session
