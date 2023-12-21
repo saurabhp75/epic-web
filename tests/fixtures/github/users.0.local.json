@@ -70,5 +70,77 @@
       }
     ],
     "primaryEmail": "Jacquelyn.Kunde@hotmail.com"
+  },
+  {
+    "code": "MOCK_GITHUB_CODE_KODY_2",
+    "accessToken": "MOCK_GITHUB_CODE_KODY_2_mock_access_token",
+    "profile": {
+      "login": "Harrison.Schuppe98",
+      "id": "MOCK_GITHUB_CODE_KODY_2_profile_id",
+      "name": "Miss Veronica Koch",
+      "avatar_url": "https://github.com/ghost.png",
+      "emails": [
+        "Alek99@hotmail.com",
+        "Katarina35@hotmail.com",
+        "Kacie.Gerlach@gmail.com"
+      ]
+    },
+    "emails": [
+      {
+        "email": "Alek99@hotmail.com",
+        "verified": false,
+        "primary": false,
+        "visibility": "public"
+      },
+      {
+        "email": "Katarina35@hotmail.com",
+        "verified": true,
+        "primary": false,
+        "visibility": null
+      },
+      {
+        "email": "Kacie.Gerlach@gmail.com",
+        "verified": true,
+        "primary": true,
+        "visibility": null
+      }
+    ],
+    "primaryEmail": "Kacie.Gerlach@gmail.com"
+  },
+  {
+    "code": "MOCK_GITHUB_CODE_KODY_3",
+    "accessToken": "MOCK_GITHUB_CODE_KODY_3_mock_access_token",
+    "profile": {
+      "login": "Mitchel73",
+      "id": "MOCK_GITHUB_CODE_KODY_3_profile_id",
+      "name": "Eleanor Jacobs",
+      "avatar_url": "https://github.com/ghost.png",
+      "emails": [
+        "Deshawn18@yahoo.com",
+        "Ashleigh.Hackett@yahoo.com",
+        "Ashlynn.West87@yahoo.com"
+      ]
+    },
+    "emails": [
+      {
+        "email": "Deshawn18@yahoo.com",
+        "verified": false,
+        "primary": false,
+        "visibility": "public"
+      },
+      {
+        "email": "Ashleigh.Hackett@yahoo.com",
+        "verified": true,
+        "primary": false,
+        "visibility": null
+      },
+      {
+        "email": "Ashlynn.West87@yahoo.com",
+        "verified": true,
+        "primary": true,
+        "visibility": null
+      }
+    ],
+    "primaryEmail": "Ashlynn.West87@yahoo.com"
   }
 ]
