@@ -192,15 +192,15 @@ async function seed() {
 
 	// create a githubUser here with the insertGitHubUser function.
 	// Set the "code" argument to "MOCK_GITHUB_CODE_KODY"
-	// const githubUser = await insertGitHubUser('MOCK_GITHUB_CODE_KODY', {
-	// 	primaryEmailAddress: 'kody@kcd.dev',
-	// })
-
-	// temporarily disabling this in the solution too
-	// but still we need the user in github
-	await insertGitHubUser('MOCK_GITHUB_CODE_KODY', {
+	const githubUser = await insertGitHubUser('MOCK_GITHUB_CODE_KODY', {
 		primaryEmailAddress: 'kody@kcd.dev',
 	})
+
+	// Added this for connection mgmt workshop
+	// but still we need the user in github
+	// await insertGitHubUser('MOCK_GITHUB_CODE_KODY', {
+	// 	primaryEmailAddress: 'kody@kcd.dev',
+	// })
 
 	await prisma.user.create({
 		// add a select to just get the ID so we're not pulling back the
@@ -215,9 +215,9 @@ async function seed() {
 			password: { create: createPassword('kodylovesyou') },
 			// add a nested connections create here to connect kody to the githubUser
 			// temporarily disabling the connections
-			// connections: {
-			// 	create: { providerName: 'github', providerId: githubUser.profile.id },
-			// },
+			connections: {
+				create: { providerName: 'github', providerId: githubUser.profile.id },
+			},
 			// connect the admin and user roles to this user
 			roles: { connect: [{ name: 'admin' }, { name: 'user' }] },
 			notes: {

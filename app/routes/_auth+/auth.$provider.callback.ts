@@ -8,6 +8,11 @@ import { ProviderNameSchema, providerLabels } from '#app/utils/connections'
 import { createToastHeaders, redirectWithToast } from '#app/utils/toast.server'
 import { prisma } from '#app/utils/db.server'
 import { handleNewSession } from './login'
+import { combineHeaders, combineResponseInits } from '#app/utils/misc'
+import {
+	destroyRedirectToHeader,
+	getRedirectCookieValue,
+} from '#app/utils/redirect-cookie.server'
 import {
 	onboardingEmailSessionKey,
 	prefilledProfileKey,
@@ -15,8 +20,11 @@ import {
 } from './onboarding_.$provider'
 import { verifySessionStorage } from '#app/utils/verification.server'
 
+const destroyRedirectTo = { 'set-cookie': destroyRedirectToHeader }
+
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const providerName = ProviderNameSchema.parse(params.provider)
+	const redirectTo = getRedirectCookieValue(request)
 
 	const label = providerLabels[providerName]
 
@@ -26,12 +34,23 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		})
 		.catch(async error => {
 			console.error(error)
-			throw await redirectWithToast('/login', {
-				type: 'error',
-				title: 'Auth Failed',
-				description: `There was an error authenticating with ${label}.`,
-			})
+			const loginRedirect = [
+				'/login',
+				redirectTo ? new URLSearchParams({ redirectTo }) : null,
+			]
+				.filter(Boolean)
+				.join('?')
+			throw await redirectWithToast(
+				loginRedirect,
+				{
+					title: 'Auth Failed',
+					description: `There was an error authenticating with ${label}.`,
+					type: 'error',
+				},
+				{ headers: destroyRedirectTo },
+			)
 		})
+
 	// handle the error thrown by logging the error and redirecting the user
 	// to the login page with a toast message indicating that there was an error
 	// authenticating with the provider.
@@ -54,13 +73,17 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	// 2. The account is already connected to someone else's account
 	// redirect to /settings/profile/connections with apprpropriate toast message
 	if (existingConnection && userId) {
-		throw await redirectWithToast('/settings/profile/connections', {
-			title: 'Already Connected',
-			description:
-				existingConnection.userId === userId
-					? `Your "${profile.username}" ${label} account is already connected.`
-					: `The "${profile.username}" ${label} account is already connected to another account.`,
-		})
+		throw await redirectWithToast(
+			'/settings/profile/connections',
+			{
+				title: 'Already Connected',
+				description:
+					existingConnection.userId === userId
+						? `Your "${profile.username}" ${label} account is already connected.`
+						: `The "${profile.username}" ${label} account is already connected to another account.`,
+			},
+			{ headers: destroyRedirectTo },
+		)
 	}
 
 	// If there's a userId, then they're trying to connect, so create a connection
@@ -71,18 +94,26 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		await prisma.connection.create({
 			data: { providerName, providerId: profile.id, userId },
 		})
-		throw await redirectWithToast('/settings/profile/connections', {
-			title: 'Connected',
-			type: 'success',
-			description: `Your "${profile.username}" ${label} account has been connected.`,
-		})
+		throw await redirectWithToast(
+			'/settings/profile/connections',
+			{
+				title: 'Connected',
+				type: 'success',
+				description: `Your "${profile.username}" ${label} account has been connected.`,
+			},
+			{ headers: destroyRedirectTo },
+		)
 	}
 
 	// if there's an existing connection, then the user is trying to login.
 	// create a new session for the existingConnection.userId
 	// once you've updated login to export handleNewSession, return a call to it here.
 	if (existingConnection) {
-		return makeSession({ request, userId: existingConnection.userId })
+		return makeSession({
+			request,
+			userId: existingConnection.userId,
+			redirectTo,
+		})
 	}
 
 	// find a user by the profile.email and if a user exists, then create a
@@ -108,7 +139,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				request,
 				userId: user.id,
 				// send them to the connections page to see their new connection
-				redirectTo: '/settings/profile/connections',
+				redirectTo: redirectTo ?? '/settings/profile/connections',
 			},
 			{
 				headers: await createToastHeaders({
@@ -142,10 +173,17 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			.padEnd(3, '_'),
 	})
 	verifySession.set(providerIdKey, profile.id)
-	return redirect(`/onboarding/${providerName}`, {
-		headers: {
-			'set-cookie': await verifySessionStorage.commitSession(verifySession),
-		},
+	const onboardingRedirect = [
+		`/onboarding/${providerName}`,
+		redirectTo ? new URLSearchParams({ redirectTo }) : null,
+	]
+		.filter(Boolean)
+		.join('?')
+	return redirect(onboardingRedirect, {
+		headers: combineHeaders(
+			{ 'set-cookie': await verifySessionStorage.commitSession(verifySession) },
+			destroyRedirectTo,
+		),
 	})
 }
 
@@ -167,6 +205,6 @@ async function makeSession(
 	})
 	return handleNewSession(
 		{ request, session, redirectTo, remember: true },
-		responseInit,
+		combineResponseInits({ headers: destroyRedirectTo }, responseInit),
 	)
 }
