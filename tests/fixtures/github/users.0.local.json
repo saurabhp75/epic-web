@@ -3,25 +3,25 @@
     "code": "MOCK_GITHUB_CODE_KODY",
     "accessToken": "MOCK_GITHUB_CODE_KODY_mock_access_token",
     "profile": {
-      "login": "Santiago_Jaskolski",
+      "login": "Pearline65",
       "id": "MOCK_GITHUB_CODE_KODY_profile_id",
-      "name": "Jana Friesen",
+      "name": "Dr. Jack Jast-Cartwright",
       "avatar_url": "https://github.com/ghost.png",
       "emails": [
-        "Amani.Nitzsche@hotmail.com",
-        "Luz52@yahoo.com",
+        "Jefferey_Goyette@yahoo.com",
+        "Layne7@gmail.com",
         "kody@kcd.dev"
       ]
     },
     "emails": [
       {
-        "email": "Amani.Nitzsche@hotmail.com",
+        "email": "Jefferey_Goyette@yahoo.com",
         "verified": false,
         "primary": false,
         "visibility": "public"
       },
       {
-        "email": "Luz52@yahoo.com",
+        "email": "Layne7@gmail.com",
         "verified": true,
         "primary": false,
         "visibility": null

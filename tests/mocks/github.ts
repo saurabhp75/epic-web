@@ -30,6 +30,7 @@ function createGitHubUser(
 		primary: false, // <-- can only have one of these
 		visibility: faker.helpers.arrayElement(['public', null]),
 	})
+	
 	const primaryEmail = {
 		...createEmail(),
 		verified: true,

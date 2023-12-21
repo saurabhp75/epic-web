@@ -5,7 +5,7 @@ import {
 	getUserId,
 } from '#app/utils/auth.server'
 import { ProviderNameSchema, providerLabels } from '#app/utils/connections'
-import { redirectWithToast } from '#app/utils/toast.server'
+import { createToastHeaders, redirectWithToast } from '#app/utils/toast.server'
 import { prisma } from '#app/utils/db.server'
 import { handleNewSession } from './login'
 import {
@@ -67,14 +67,41 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	// create a new session for the existingConnection.userId
 	// once you've updated login to export handleNewSession, return a call to it here.
 	if (existingConnection) {
-		const session = await prisma.session.create({
-			select: { id: true, expirationDate: true, userId: true },
-			data: {
-				expirationDate: getSessionExpirationDate(),
-				userId: existingConnection.userId,
-			},
+		return makeSession({ request, userId: existingConnection.userId })
+	}
+
+	// find a user by the profile.email and if a user exists, then create a
+	// new connection for that user and return a call to makeSession
+	// redirect them to '/settings/profile/connections'
+	// use `createToastHeaders` to add a header to create a toast message:
+	// {
+	// 	title: 'Connected',
+	// 	description: `Your "${profile.username}" ${label} account has been connected.`,
+	// }
+	// if the email matches a user in the db, then link the account and
+	// make a new session
+	const user = await prisma.user.findUnique({
+		select: { id: true },
+		where: { email: profile.email.toLowerCase() },
+	})
+	if (user) {
+		await prisma.connection.create({
+			data: { providerName, providerId: profile.id, userId: user.id },
 		})
-		return handleNewSession({ request, session, remember: true })
+		return makeSession(
+			{
+				request,
+				userId: user.id,
+				// send them to the connections page to see their new connection
+				redirectTo: '/settings/profile/connections',
+			},
+			{
+				headers: await createToastHeaders({
+					title: 'Connected',
+					description: `Your "${profile.username}" ${label} account has been connected.`,
+				}),
+			},
+		)
 	}
 
 	// get the verifySession here from verifySessionStorage.getSession
@@ -105,4 +132,26 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			'set-cookie': await verifySessionStorage.commitSession(verifySession),
 		},
 	})
+}
+
+async function makeSession(
+	{
+		request,
+		userId,
+		redirectTo,
+	}: { request: Request; userId: string; redirectTo?: string | null },
+	responseInit?: ResponseInit,
+) {
+	redirectTo ??= '/'
+	const session = await prisma.session.create({
+		select: { id: true, expirationDate: true, userId: true },
+		data: {
+			expirationDate: getSessionExpirationDate(),
+			userId,
+		},
+	})
+	return handleNewSession(
+		{ request, session, redirectTo, remember: true },
+		responseInit,
+	)
 }

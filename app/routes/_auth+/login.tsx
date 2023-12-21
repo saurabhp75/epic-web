@@ -16,7 +16,7 @@ import { Spacer } from '#app/components/spacer'
 import { StatusButton } from '#app/components/ui/status-button'
 import { validateCSRF } from '#app/utils/csrf.server'
 import { checkHoneypot } from '#app/utils/honeypot.server'
-import { invariant, useIsPending } from '#app/utils/misc'
+import { combineResponseInits, invariant, useIsPending } from '#app/utils/misc'
 import { PasswordSchema, UsernameSchema } from '#app/utils/user-validation'
 import { sessionStorage } from '#app/utils/session.server'
 import { login, requireAnonymous, sessionKey } from '#app/utils/auth.server'
@@ -34,20 +34,23 @@ const verifiedTimeKey = 'verified-time'
 const unverifiedSessionIdKey = 'unverified-session-id'
 const rememberKey = 'remember-me'
 
-// 🐨 you can export a handleNewSession function here, you'll get its contents
+// you can export a handleNewSession function here, you'll get its contents
 // from the action below.
-// 🐨 it should take a request, session, redirectTo, and remember
-export async function handleNewSession({
-	request,
-	session,
-	redirectTo,
-	remember = false,
-}: {
-	request: Request
-	session: { userId: string; id: string; expirationDate: Date }
-	redirectTo?: string
-	remember?: boolean
-}) {
+// it should take a request, session, redirectTo, and remember
+export async function handleNewSession(
+	{
+		request,
+		session,
+		redirectTo,
+		remember = false,
+	}: {
+		request: Request
+		session: { userId: string; id: string; expirationDate: Date }
+		redirectTo?: string
+		remember?: boolean
+	},
+	responseInit?: ResponseInit,
+) {
 	if (await shouldRequestTwoFA({ request, userId: session.userId })) {
 		const verifySession = await verifySessionStorage.getSession()
 		verifySession.set(unverifiedSessionIdKey, session.id)
@@ -69,24 +72,37 @@ export async function handleNewSession({
 			type: twoFAVerificationType,
 			target: session.userId,
 		})
-		return redirect(redirectUrl.toString(), {
-			headers: {
-				'set-cookie': await verifySessionStorage.commitSession(verifySession),
-			},
-		})
+		return redirect(
+			redirectUrl.toString(),
+			combineResponseInits(
+				{
+					headers: {
+						'set-cookie':
+							await verifySessionStorage.commitSession(verifySession),
+					},
+				},
+				responseInit,
+			),
+		)
 	} else {
 		const cookieSession = await sessionStorage.getSession(
 			request.headers.get('cookie'),
 		)
 		cookieSession.set(sessionKey, session.id)
 
-		return redirect(safeRedirect(redirectTo), {
-			headers: {
-				'set-cookie': await sessionStorage.commitSession(cookieSession, {
-					expires: remember ? session.expirationDate : undefined,
-				}),
-			},
-		})
+		return redirect(
+			safeRedirect(redirectTo),
+			combineResponseInits(
+				{
+					headers: {
+						'set-cookie': await sessionStorage.commitSession(cookieSession, {
+							expires: remember ? session.expirationDate : undefined,
+						}),
+					},
+				},
+				responseInit,
+			),
+		)
 	}
 }
 
