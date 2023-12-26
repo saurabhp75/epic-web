@@ -9,7 +9,14 @@
     "debug": "NODE_OPTIONS=\"--inspect\" remix dev -c \"node ./server/dev-server.js\" --manual",
     "start": "remix-serve ./build/index.js",
     "clean": "rm -rf build public/build",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
+    "test:e2e": "npm run test:e2e:dev --silent",
+    "test:e2e:dev": "playwright test --ui",
+    "pretest:e2e:run": "npm run build",
+    "test:e2e:run": "cross-env CI=true playwright test",
+    "test:e2e:install": "npx playwright install --with-deps chromium"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
@@ -63,6 +70,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^8.2.0",
+    "@playwright/test": "^1.40.1",
     "@remix-run/dev": "^2.3.1",
     "@remix-run/eslint-config": "^2.3.1",
     "@total-typescript/ts-reset": "^0.5.1",
@@ -90,5 +98,12 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "eslintIgnore": [
+    "/node_modules",
+    "/build",
+    "/public/build",
+    "/playwright-report",
+    "/server-build"
+  ]
 }

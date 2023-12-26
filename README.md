@@ -9,6 +9,7 @@
 - 2FA option.
 - Mock email using `msw`.
 - Forgot/Reset password flow.
-- "Remeber me" feature at the time of login.
+- "Remember me" feature at the time of login.
 - Email verification before onboarding.
 - OAuth enabled login.
+- End to end test using playwright.
