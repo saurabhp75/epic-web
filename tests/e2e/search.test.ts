@@ -1,34 +1,6 @@
-import { prisma } from '#app/utils/db.server'
-import { createUser } from '#tests/db-utils'
-import { test as base } from '@playwright/test'
+import { expect, test } from '#tests/playwright-utils'
 
 // Run "npx playwright test --ui" to run this test
-
-// The newUser variable should be assigned to the result of calling insertNewUser
-const test = base.extend<{
-	insertNewUser(): Promise<{
-		id: string
-		name: string | null
-		username: string
-	}>
-}>({
-	// eslint-disable-next-line no-empty-pattern
-	insertNewUser: async ({}, use) => {
-		let userId: string | undefined = undefined
-		await use(async () => {
-			const userData = createUser()
-			const newUser = await prisma.user.create({
-				select: { id: true, name: true, username: true },
-				data: userData,
-			})
-			userId = newUser.id
-			return newUser
-		})
-		await prisma.user.deleteMany({ where: { id: userId } })
-	},
-})
-
-const { expect } = test
 
 // create test here, you'll need the "page" fixture.
 test('Search from home page', async ({ page, insertNewUser }) => {
