@@ -1,7 +1,8 @@
 import { faker } from '@faker-js/faker'
-// 🐨 you'll get vi from here
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { getErrorMessage } from './misc'
+
+// Call these unit test using "npm run test"
 
 test('Error object returns message', () => {
 	const message = faker.lorem.words(2)
@@ -14,10 +15,24 @@ test('String returns itself', () => {
 })
 
 test('undefined falls back to Unknown', () => {
-	// 🐨 use spyOn on the console's error property
-	// 🐨 mock the implementation with a function that does nothing (💰 () => {})˘
+	// workaround for console.error shown in error messages
+	// console.error = () => {}
+
+	// Add a vi mock spy
+	const consoleError = vi.spyOn(console, 'error')
+	consoleError.mockImplementation(() => {})
+
 	expect(getErrorMessage(undefined)).toBe('Unknown Error')
-	// 🐨 make sure console.error was once
-	// 🐨 assert that it was called with the right arguments
-	// 🐨 restore the mock so we don't swallow errors for other tests.
+
+	// assert that it was called with the right arguments
+	expect(consoleError).toHaveBeenCalledWith(
+		'Unable to get error message for error',
+		undefined,
+	)
+
+	// make sure console.error was called once
+	expect(consoleError).toHaveBeenCalledTimes(1)
+
+	// restore the mock so we don't swallow errors for other tests.
+	consoleError.mockRestore()
 })
