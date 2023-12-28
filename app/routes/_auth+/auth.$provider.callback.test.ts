@@ -7,7 +7,7 @@ import * as setCookieParser from 'set-cookie-parser'
 // import '#tests/mocks/index.ts'
 import { server } from '#tests/mocks/index'
 import { consoleError } from '#tests/setup/setup-test-env'
-import { afterEach, expect, test } from 'vitest'
+import { expect, test } from 'vitest'
 import { connectionSessionStorage } from '#app/utils/connections.server.ts'
 import { loader } from './auth.$provider.callback.ts'
 import { invariant } from '#app/utils/misc.tsx'
@@ -16,9 +16,14 @@ const ROUTE_PATH = '/auth/github/callback'
 const PARAMS = { provider: 'github' }
 const BASE_URL = 'https://www.epicstack.dev'
 
-afterEach(() => {
-	server.resetHandlers()
-})
+// add some cleanup for the github users that are inserted during the tests:
+// use deleteGitHubUsers from '#tests/mocks/github.ts' in an afterEach
+
+// add some cleanup for our own users that are inserted during the tests:
+// use insertedUsers from '#tests/db-utils.ts' and make sure to clear it after
+// deleting the users.
+// if you need a reminder for how we did this in playwright,
+// check tests/playwright-utils.ts
 
 test('a new user goes to onboarding', async () => {
 	const request = await setupRequest()

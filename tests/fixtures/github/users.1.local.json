@@ -106,5 +106,41 @@
       }
     ],
     "primaryEmail": "Danyka_Gibson@hotmail.com"
+  },
+  {
+    "code": "4ffb530d-e724-4f49-b5ad-e4b0022a5f5c",
+    "accessToken": "4ffb530d-e724-4f49-b5ad-e4b0022a5f5c_mock_access_token",
+    "profile": {
+      "login": "Geovany31",
+      "id": "4ffb530d-e724-4f49-b5ad-e4b0022a5f5c_profile_id",
+      "name": "Anthony Rutherford",
+      "avatar_url": "https://github.com/ghost.png",
+      "emails": [
+        "Maria_Jerde@yahoo.com",
+        "Heloise71@hotmail.com",
+        "Demetrius.Runolfsson@hotmail.com"
+      ]
+    },
+    "emails": [
+      {
+        "email": "Maria_Jerde@yahoo.com",
+        "verified": false,
+        "primary": false,
+        "visibility": "public"
+      },
+      {
+        "email": "Heloise71@hotmail.com",
+        "verified": true,
+        "primary": false,
+        "visibility": null
+      },
+      {
+        "email": "Demetrius.Runolfsson@hotmail.com",
+        "verified": true,
+        "primary": true,
+        "visibility": null
+      }
+    ],
+    "primaryEmail": "Demetrius.Runolfsson@hotmail.com"
   }
 ]
