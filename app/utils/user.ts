@@ -1,9 +1,11 @@
 import { useRouteLoaderData } from '@remix-run/react'
 import { type loader as rootLoader } from '#app/root'
 
-// 🦺 you can make this type safe by importing the root loader type like this:
-// import { type loader as rootLoader } from '#app/root'
 export function useOptionalUser() {
+	// because we call useRouteLoaderData with 'root', we're telling Remix we
+	// want the loader data from the route that has the ID of 'root'. With our
+	// route convention that's assigned to the root route (the one in app/root.tsx)
+	// automatically, but in our tests, we need to definte it manually.
 	const data = useRouteLoaderData<typeof rootLoader>('root')
 	return data?.user ?? null
 }
@@ -13,7 +15,7 @@ export function useOptionalUser() {
 
 export function useUser() {
 	// call useOptionalUser and if the user does not exist, throw
-	// an error with an informative error message. 
+	// an error with an informative error message.
 	// Otherwise return the user
 	const maybeUser = useOptionalUser()
 	if (!maybeUser) {
