@@ -1,0 +1,110 @@
+[
+  {
+    "code": "360da45c-870e-45ff-bb8f-a24bf8a8b3f5",
+    "accessToken": "360da45c-870e-45ff-bb8f-a24bf8a8b3f5_mock_access_token",
+    "profile": {
+      "login": "Aisha.Huel",
+      "id": "360da45c-870e-45ff-bb8f-a24bf8a8b3f5_profile_id",
+      "name": "Nelson Rogahn",
+      "avatar_url": "https://github.com/ghost.png",
+      "emails": [
+        "Vidal.Dach@yahoo.com",
+        "Mohammad_Berge@hotmail.com",
+        "Blanche.Hand58@yahoo.com"
+      ]
+    },
+    "emails": [
+      {
+        "email": "Vidal.Dach@yahoo.com",
+        "verified": false,
+        "primary": false,
+        "visibility": "public"
+      },
+      {
+        "email": "Mohammad_Berge@hotmail.com",
+        "verified": true,
+        "primary": false,
+        "visibility": null
+      },
+      {
+        "email": "Blanche.Hand58@yahoo.com",
+        "verified": true,
+        "primary": true,
+        "visibility": "public"
+      }
+    ],
+    "primaryEmail": "Blanche.Hand58@yahoo.com"
+  },
+  {
+    "code": "5e8da4bd-2108-4e88-b467-34a458df4479",
+    "accessToken": "5e8da4bd-2108-4e88-b467-34a458df4479_mock_access_token",
+    "profile": {
+      "login": "Hollie_Rohan",
+      "id": "5e8da4bd-2108-4e88-b467-34a458df4479_profile_id",
+      "name": "Alberto Dicki-Will",
+      "avatar_url": "https://github.com/ghost.png",
+      "emails": [
+        "Arne.Johns@hotmail.com",
+        "Avis.Rempel43@yahoo.com",
+        "Emmanuel.Lindgren78@hotmail.com"
+      ]
+    },
+    "emails": [
+      {
+        "email": "Arne.Johns@hotmail.com",
+        "verified": false,
+        "primary": false,
+        "visibility": "public"
+      },
+      {
+        "email": "Avis.Rempel43@yahoo.com",
+        "verified": true,
+        "primary": false,
+        "visibility": null
+      },
+      {
+        "email": "Emmanuel.Lindgren78@hotmail.com",
+        "verified": true,
+        "primary": true,
+        "visibility": null
+      }
+    ],
+    "primaryEmail": "Emmanuel.Lindgren78@hotmail.com"
+  },
+  {
+    "code": "ddeedf1d-3244-4fc9-83ae-2fb9dfc2b8c5",
+    "accessToken": "ddeedf1d-3244-4fc9-83ae-2fb9dfc2b8c5_mock_access_token",
+    "profile": {
+      "login": "Michael_Dicki54",
+      "id": "ddeedf1d-3244-4fc9-83ae-2fb9dfc2b8c5_profile_id",
+      "name": "Phil Reilly",
+      "avatar_url": "https://github.com/ghost.png",
+      "emails": [
+        "Lilly.Sporer96@yahoo.com",
+        "Darwin40@gmail.com",
+        "Danyka_Gibson@hotmail.com"
+      ]
+    },
+    "emails": [
+      {
+        "email": "Lilly.Sporer96@yahoo.com",
+        "verified": false,
+        "primary": false,
+        "visibility": "public"
+      },
+      {
+        "email": "Darwin40@gmail.com",
+        "verified": true,
+        "primary": false,
+        "visibility": null
+      },
+      {
+        "email": "Danyka_Gibson@hotmail.com",
+        "verified": true,
+        "primary": true,
+        "visibility": "public"
+      }
+    ],
+    "primaryEmail": "Danyka_Gibson@hotmail.com"
+  }
+]

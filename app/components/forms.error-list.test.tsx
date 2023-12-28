@@ -17,10 +17,10 @@ afterEach(() => {
 //      utility from vitest to ensure the length is 0
 
 test('shows nothing when given an empty list', async () => {
-	screen.debug()
+	// screen.debug()
 	// await render(<ErrorList errors={['one']} />)
 	await render(<ErrorList />)
-	screen.debug()
+	// screen.debug()
 
 	expect(screen.queryAllByRole('listitem')).toHaveLength(0)
 })
@@ -35,7 +35,7 @@ test('shows a single error', async () => {
 test('shows multiple errors', async () => {
 	// add a screen.debug() here to test what things look like before/after
 	// you add the cleanup call
-	screen.debug()
+	// screen.debug()
 	const errors = [faker.lorem.words(3), faker.lorem.words(3)]
 	await render(<ErrorList errors={errors} />)
 	// Generate playground URL
