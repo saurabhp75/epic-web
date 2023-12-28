@@ -7,23 +7,38 @@ import * as setCookieParser from 'set-cookie-parser'
 // import '#tests/mocks/index.ts'
 import { server } from '#tests/mocks/index'
 import { consoleError } from '#tests/setup/setup-test-env'
-import { expect, test } from 'vitest'
+import { afterEach, expect, test } from 'vitest'
 import { connectionSessionStorage } from '#app/utils/connections.server.ts'
 import { loader } from './auth.$provider.callback.ts'
 import { invariant } from '#app/utils/misc.tsx'
+import { deleteGitHubUsers, insertGitHubUser } from '#tests/mocks/github.ts'
+import { prisma } from '#app/utils/db.server.ts'
+import { createUser, insertNewUser, insertedUsers } from '#tests/db-utils.ts'
+import { getSessionExpirationDate, sessionKey } from '#app/utils/auth.server.ts'
+import { GITHUB_PROVIDER_NAME } from '#app/utils/connections.tsx'
+import { generateTOTP } from '@epic-web/totp'
+import { twoFAVerificationType } from '../settings+/profile.two-factor.tsx'
 
 const ROUTE_PATH = '/auth/github/callback'
 const PARAMS = { provider: 'github' }
 const BASE_URL = 'https://www.epicstack.dev'
 
 // add some cleanup for the github users that are inserted during the tests:
-// use deleteGitHubUsers from '#tests/mocks/github.ts' in an afterEach
+afterEach(async () => {
+	await deleteGitHubUsers()
+})
 
 // add some cleanup for our own users that are inserted during the tests:
 // use insertedUsers from '#tests/db-utils.ts' and make sure to clear it after
 // deleting the users.
 // if you need a reminder for how we did this in playwright,
 // check tests/playwright-utils.ts
+afterEach(async () => {
+	await prisma.user.deleteMany({
+		where: { id: { in: [...insertedUsers] } },
+	})
+	insertedUsers.clear()
+})
 
 test('a new user goes to onboarding', async () => {
 	const request = await setupRequest()
@@ -72,6 +87,162 @@ test('when auth fails, send the user to login with a toast', async () => {
 	expect(consoleError).toHaveBeenCalledTimes(1)
 })
 
+test('when a user is logged in, it creates the connection', async () => {
+	// create a new github user with insertGitHubUser from '#tests/mocks/github.ts'
+	const githubUser = await insertGitHubUser()
+
+	// create a new user (use our insertNewUser util from '#tests/db-utils.ts')
+	const newUser = await insertNewUser()
+
+	// create a new session that's connected to that user
+	const session = await prisma.session.create({
+		select: { id: true },
+		data: {
+			expirationDate: getSessionExpirationDate(),
+			user: { connect: newUser },
+		},
+	})
+
+	// pass the session.id and githubUser.code to the setupRequest function
+	// then go below to handle that
+	const request = await setupRequest({
+		sessionId: session.id,
+		code: githubUser.code,
+	})
+	const response = await loader({ request, params: PARAMS, context: {} })
+	assertRedirect(response, '/settings/profile/connections')
+	assertToastSent(response)
+
+	// look in prisma.connection for the connection that should have been
+	// created for the user.id + the githubUser.profile.id
+	// assert the connection exists
+	const connection = await prisma.connection.findFirst({
+		select: { id: true },
+		where: {
+			userId: newUser.id,
+			providerId: githubUser.profile.id.toString(),
+		},
+	})
+
+	// console.log(connection);
+
+	expect(
+		connection,
+		'the connection was not created in the database',
+	).toBeTruthy()
+})
+
+test(`when a user is logged in and has already connected, it doesn't do anything and just redirects the user back to the connections page`, async () => {
+	const session = await setupUser()
+	const githubUser = await insertGitHubUser()
+	await prisma.connection.create({
+		data: {
+			providerName: GITHUB_PROVIDER_NAME,
+			userId: session.userId,
+			providerId: githubUser.profile.id.toString(),
+		},
+	})
+	const request = await setupRequest({
+		sessionId: session.id,
+		code: githubUser.code,
+	})
+	const response = await loader({ request, params: PARAMS, context: {} })
+	assertRedirect(response, '/settings/profile/connections')
+	assertToastSent(response)
+})
+
+test('when a user exists with the same email, create connection and make session', async () => {
+	const githubUser = await insertGitHubUser()
+	const email = githubUser.primaryEmail.toLowerCase()
+	const { userId } = await setupUser({ ...createUser(), email })
+	const request = await setupRequest({ code: githubUser.code })
+	const response = await loader({ request, params: PARAMS, context: {} })
+
+	assertRedirect(response, '/settings/profile/connections')
+
+	assertToastSent(response)
+
+	const connection = await prisma.connection.findFirst({
+		select: { id: true },
+		where: {
+			userId,
+			providerId: githubUser.profile.id.toString(),
+		},
+	})
+	expect(
+		connection,
+		'the connection was not created in the database',
+	).toBeTruthy()
+
+	await assertSessionMade(response, userId)
+})
+
+test('gives an error if the account is already connected to another user', async () => {
+	const githubUser = await insertGitHubUser()
+	await prisma.user.create({
+		data: {
+			...createUser(),
+			connections: {
+				create: {
+					providerName: GITHUB_PROVIDER_NAME,
+					providerId: githubUser.profile.id.toString(),
+				},
+			},
+		},
+	})
+	const session = await setupUser()
+	const request = await setupRequest({
+		sessionId: session.id,
+		code: githubUser.code,
+	})
+	const response = await loader({ request, params: PARAMS, context: {} })
+	assertRedirect(response, '/settings/profile/connections')
+	assertToastSent(response)
+})
+
+test('if a user is not logged in, but the connection exists, make a session', async () => {
+	const githubUser = await insertGitHubUser()
+	const { userId } = await setupUser()
+	await prisma.connection.create({
+		data: {
+			providerName: GITHUB_PROVIDER_NAME,
+			providerId: githubUser.profile.id.toString(),
+			userId,
+		},
+	})
+	const request = await setupRequest({ code: githubUser.code })
+	const response = await loader({ request, params: PARAMS, context: {} })
+	assertRedirect(response, '/')
+	await assertSessionMade(response, userId)
+})
+
+test('if a user is not logged in, but the connection exists and they have enabled 2FA, send them to verify their 2FA and do not make a session', async () => {
+	const githubUser = await insertGitHubUser()
+	const { userId } = await setupUser()
+	await prisma.connection.create({
+		data: {
+			providerName: GITHUB_PROVIDER_NAME,
+			providerId: githubUser.profile.id.toString(),
+			userId,
+		},
+	})
+	const { otp: _otp, ...config } = generateTOTP()
+	await prisma.verification.create({
+		data: {
+			type: twoFAVerificationType,
+			target: userId,
+			...config,
+		},
+	})
+	const request = await setupRequest({ code: githubUser.code })
+	const response = await loader({ request, params: PARAMS, context: {} })
+	const searchParams = new URLSearchParams({
+		type: twoFAVerificationType,
+		target: userId,
+	})
+	assertRedirect(response, `/verify?${searchParams}`)
+})
+
 function assertToastSent(response: Response) {
 	const setCookie = response.headers.get('set-cookie')
 	invariant(setCookie, 'set-cookie header should be set')
@@ -81,9 +252,33 @@ function assertToastSent(response: Response) {
 	)
 }
 
-// we're going to be asserting redirects a lot, so if you've got extra time
-// make a helper function here called assertRedirect that takes a response and
-// a redirectTo string. It should assert that the response has a 300 status code
+async function assertSessionMade(response: Response, userId: string) {
+	// get the set-cookie header from the response
+	const setCookie = response.headers.get('set-cookie')
+	invariant(setCookie, 'set-cookie header should be set')
+
+	// parse the set-cookie header with setCookieParser.splitCookiesString
+	const parsedCookie = setCookieParser.splitCookiesString(setCookie)
+
+	// console.log(parsedCookie)
+
+	// assert that one of the parsed cookies has the 'en_session' in it
+	expect(parsedCookie).toEqual(
+		expect.arrayContaining([expect.stringContaining('en_session')]),
+	)
+
+	// lookup the new session in the database by the userId
+	const session = await prisma.session.findFirst({
+		select: { id: true },
+		where: { userId },
+	})
+
+	// assert the session exists
+	expect(session).toBeTruthy()
+}
+
+// helper function assertRedirect takes a response and a redirectTo
+// string. It asserts that the response has a 300 status code
 // and that the location header is set to the redirectTo string.
 function assertRedirect(response: Response, redirectTo: string) {
 	expect(response.status).toBeGreaterThanOrEqual(300)
@@ -98,14 +293,17 @@ function convertSetCookieToCookie(setCookie: string) {
 	}).toString()
 }
 
-async function setupRequest() {
+async function setupRequest({
+	sessionId,
+	code = faker.string.uuid(),
+}: { sessionId?: string; code?: string } = {}) {
 	// create the URL with the ROUTE_PATH and the BASE_URL
 	// tip: new URL('/some/path', 'https://example.com').toString() === 'https://example.com/some/path'
 	const url = new URL(ROUTE_PATH, BASE_URL)
 
 	// create the state and code  faker.string.uuid() should work fine)
 	const state = faker.string.uuid()
-	const code = faker.string.uuid()
+	// const code = faker.string.uuid()
 
 	// set the url.searchParams for `state` and `code`
 	url.searchParams.set('state', state)
@@ -117,6 +315,16 @@ async function setupRequest() {
 	// set the 'oauth2:state' value in the cookie session to the `state`
 	connectionSession.set('oauth2:state', state)
 
+	// get the cookieSession from sessionStorage (#app/utils/sessions.server.ts)
+
+	// if there is a sessionId, then set it into the cookieSession under the
+	// sessionKey property
+	const cookieSession = await sessionStorage.getSession()
+	if (sessionId) cookieSession.set(sessionKey, sessionId)
+
+	const sessionSetCookieHeader =
+		await sessionStorage.commitSession(cookieSession)
+
 	// get a set-cookie header from connectionSessionStorage.commitSession with the cookieSession
 	const connectionSetCookieHeader =
 		await connectionSessionStorage.commitSession(connectionSession)
@@ -127,9 +335,27 @@ async function setupRequest() {
 	const request = new Request(url.toString(), {
 		method: 'GET',
 		headers: {
-			cookie: convertSetCookieToCookie(connectionSetCookieHeader),
+			// multiple cookies are joined by the semicolon character,
+			// so you'll need to join both cookie values together with a semicolon here:
+			cookie: [
+				convertSetCookieToCookie(sessionSetCookieHeader),
+				convertSetCookieToCookie(connectionSetCookieHeader),
+			].join('; '),
 		},
 	})
 
 	return request
+}
+
+async function setupUser(userData = createUser()) {
+	const newUser = await insertNewUser(userData)
+	const session = await prisma.session.create({
+		data: {
+			expirationDate: getSessionExpirationDate(),
+			user: { connect: newUser },
+		},
+		select: { id: true, userId: true },
+	})
+
+	return session
 }

@@ -4,7 +4,7 @@ import { Icon } from '#app/components/ui/icon'
 import { StatusButton } from '#app/components/ui/status-button'
 import { useIsPending } from './misc'
 
-const GITHUB_PROVIDER_NAME = 'github'
+export const GITHUB_PROVIDER_NAME = 'github'
 // to add another provider, set their name here and add it to the providerNames below
 
 export const providerNames = [GITHUB_PROVIDER_NAME] as const
