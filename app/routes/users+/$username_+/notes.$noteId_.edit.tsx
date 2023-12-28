@@ -1,10 +1,11 @@
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
 import {
 	json,
-	type DataFunctionArgs,
 	redirect,
 	unstable_createMemoryUploadHandler as createMemoryUploadHandler,
 	unstable_parseMultipartFormData as parseMultipartFormData,
+	type LoaderFunctionArgs,
+	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { createId as cuid } from '@paralleldrive/cuid2'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
@@ -36,7 +37,7 @@ import { validateCSRF } from '#app/utils/csrf.server'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { requireUser } from '#app/utils/auth.server'
 
-export async function loader({ params, request }: DataFunctionArgs) {
+export async function loader({ params, request }: LoaderFunctionArgs) {
 	const user = await requireUser(request)
 	invariantResponse(user.username === params.username, 'Not authorized', {
 		status: 403,
@@ -97,7 +98,7 @@ const NoteEditorSchema = z.object({
 	images: z.array(ImageFieldsetSchema),
 })
 
-export async function action({ request, params }: DataFunctionArgs) {
+export async function action({ request, params }: ActionFunctionArgs) {
 	invariantResponse(params.noteId, 'noteId param is required')
 
 	const formData = await parseMultipartFormData(

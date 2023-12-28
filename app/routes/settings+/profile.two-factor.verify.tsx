@@ -1,6 +1,11 @@
 import { conform, useForm } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
-import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
+import {
+	json,
+	redirect,
+	type LoaderFunctionArgs,
+	type ActionFunctionArgs,
+} from '@remix-run/node'
 import {
 	Form,
 	useActionData,
@@ -32,7 +37,7 @@ const VerifySchema = z.object({
 
 export const twoFAVerifyVerificationType = '2fa-verify'
 
-export async function loader({ request }: DataFunctionArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
 	// create a qrCode of the otpUri (await QRCode.toDataURL(otpUri))
 	// send the qrCode and otpUri
 	const userId = await requireUserId(request)
@@ -71,7 +76,7 @@ export async function loader({ request }: DataFunctionArgs) {
 	return json({ otpUri, qrCode })
 }
 
-export async function action({ request }: DataFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
 	const userId = await requireUserId(request)
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)

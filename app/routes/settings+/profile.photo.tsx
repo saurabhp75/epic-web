@@ -5,7 +5,8 @@ import {
 	redirect,
 	unstable_createMemoryUploadHandler,
 	unstable_parseMultipartFormData,
-	type DataFunctionArgs,
+	type ActionFunctionArgs,
+	type LoaderFunctionArgs,
 } from '@remix-run/node'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
 import { useState } from 'react'
@@ -25,7 +26,7 @@ import {
 	useIsPending,
 } from '#app/utils/misc'
 import { requireUserId } from '#app/utils/auth.server'
-import { request } from 'express'
+// import { request } from 'express'
 
 export const handle = {
 	breadcrumb: <Icon name="avatar">Photo</Icon>,
@@ -40,7 +41,7 @@ const PhotoFormSchema = z.object({
 		.refine(file => file.size <= MAX_SIZE, 'Image size must be less than 3MB'),
 })
 
-export async function loader({ request }: DataFunctionArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
@@ -55,7 +56,7 @@ export async function loader({ request }: DataFunctionArgs) {
 	return json({ user })
 }
 
-export async function action({ request }: DataFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
 	const userId = await requireUserId(request)
 	const formData = await unstable_parseMultipartFormData(
 		request,

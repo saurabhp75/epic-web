@@ -1,4 +1,9 @@
-import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
+import {
+	json,
+	redirect,
+	type LoaderFunctionArgs,
+	type ActionFunctionArgs,
+} from '@remix-run/node'
 import { Link, Form, useLoaderData } from '@remix-run/react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { Icon } from '#app/components/ui/icon'
@@ -11,7 +16,7 @@ import { twoFAVerifyVerificationType } from './profile.two-factor.verify'
 import { prisma } from '#app/utils/db.server'
 import { twoFAVerificationType } from './profile.two-factor'
 
-export async function loader({ request }: DataFunctionArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
 	// determine whether the user has 2fa
 	const userId = await requireUserId(request)
 	const verification = await prisma.verification.findUnique({
@@ -22,7 +27,7 @@ export async function loader({ request }: DataFunctionArgs) {
 	return json({ isTwoFAEnabled: Boolean(verification) })
 }
 
-export async function action({ request }: DataFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
 	const userId = await requireUserId(request)
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)

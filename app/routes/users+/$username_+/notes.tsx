@@ -3,10 +3,10 @@ import { Icon } from '#app/components/ui/icon'
 import { prisma } from '#app/utils/db.server'
 import { cn, getUserImgSrc, invariantResponse } from '#app/utils/misc'
 import { useOptionalUser } from '#app/utils/user'
-import { json, type DataFunctionArgs } from '@remix-run/node'
+import { json, type LoaderFunctionArgs } from '@remix-run/node'
 import { Link, NavLink, Outlet, useLoaderData } from '@remix-run/react'
 
-export async function loader({ params }: DataFunctionArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
 	// Nest related queries (notes and images)
 	const owner = await prisma.user.findFirst({
 		select: {

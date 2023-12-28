@@ -16,7 +16,8 @@
     "test:e2e:dev": "playwright test --ui",
     "pretest:e2e:run": "npm run build",
     "test:e2e:run": "cross-env CI=true playwright test",
-    "test:e2e:install": "npx playwright install --with-deps chromium"
+    "test:e2e:install": "npx playwright install --with-deps chromium",
+    "lint": "eslint ."
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

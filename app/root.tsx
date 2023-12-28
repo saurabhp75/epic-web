@@ -4,8 +4,9 @@ import {
 	json,
 	type MetaFunction,
 	type LinksFunction,
-	type DataFunctionArgs,
 	redirect,
+	type LoaderFunctionArgs,
+	type ActionFunctionArgs,
 } from '@remix-run/node'
 import {
 	// Form,
@@ -90,7 +91,7 @@ export const meta: MetaFunction = () => {
 	]
 }
 
-export async function loader({ request }: DataFunctionArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
 	// The two returns below are exactly same, json() is a
 	// handy utility for sending responses
 	// return json({ hello: 'world' })
@@ -176,7 +177,7 @@ const ThemeFormSchema = z.object({
 	theme: z.enum(['light', 'dark']),
 })
 
-export async function action({ request }: DataFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
 	const formData = await request.formData()
 	invariantResponse(
 		formData.get('intent') === 'update-theme',

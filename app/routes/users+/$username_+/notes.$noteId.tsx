@@ -2,9 +2,10 @@ import { prisma } from '#app/utils/db.server'
 import { getNoteImgSrc, invariantResponse, useIsPending } from '#app/utils/misc'
 import {
 	json,
-	type DataFunctionArgs,
 	redirect,
 	type MetaFunction,
+	type LoaderFunctionArgs,
+	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { Form, Link, useActionData, useLoaderData } from '@remix-run/react'
 import { formatDistanceToNow } from 'date-fns'
@@ -25,7 +26,7 @@ import { useOptionalUser } from '#app/utils/user'
 import { requireUser } from '#app/utils/auth.server'
 import { requireUserWithPermission, userHasPermission } from '#app/utils/permissions'
 
-export async function loader({ params }: DataFunctionArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
 	const note = await prisma.note.findUnique({
 		where: { id: params.noteId },
 		select: {
@@ -59,7 +60,7 @@ const DeleteFormSchema = z.object({
 	noteId: z.string(),
 })
 
-export async function action({ request }: DataFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
 	const user = await requireUser(request)
 
 	const formData = await request.formData()

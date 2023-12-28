@@ -7,7 +7,7 @@ import { checkHoneypot } from '#app/utils/honeypot.server'
 import { EmailSchema, UsernameSchema } from '#app/utils/user-validation'
 import { conform, useForm } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
-import { json, type DataFunctionArgs, redirect } from '@remix-run/node'
+import { json, type ActionFunctionArgs, redirect } from '@remix-run/node'
 import { Link, type MetaFunction, useFetcher } from '@remix-run/react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
@@ -20,7 +20,7 @@ const ForgotPasswordSchema = z.object({
 	usernameOrEmail: z.union([EmailSchema, UsernameSchema]),
 })
 
-export async function action({ request }: DataFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
 	const formData = await request.formData()
 	await validateCSRF(formData, request.headers)
 	checkHoneypot(formData)

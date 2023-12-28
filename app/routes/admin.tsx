@@ -1,9 +1,9 @@
-import { type DataFunctionArgs, json } from '@remix-run/node'
+import { json, type LoaderFunctionArgs } from '@remix-run/node'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
 import { Spacer } from '#app/components/spacer'
 import { requireUserWithRole } from '#app/utils/permissions'
 
-export async function loader({ request }: DataFunctionArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
 	// lock down this route to only users with the "admin" role with the
 	// requireUserWithRole utility
 	await requireUserWithRole(request, 'admin')

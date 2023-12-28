@@ -1,6 +1,10 @@
 import { Form, Link, useLoaderData } from '@remix-run/react'
 import { prisma } from '#app/utils/db.server'
-import { json, type DataFunctionArgs, type MetaFunction } from '@remix-run/node'
+import {
+	json,
+	type LoaderFunctionArgs,
+	type MetaFunction,
+} from '@remix-run/node'
 import { getUserImgSrc, invariantResponse } from '#app/utils/misc'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
 import { Button } from '#app/components/ui/button'
@@ -9,7 +13,7 @@ import { useOptionalUser } from '#app/utils/user'
 import { Icon } from '#app/components/ui/icon'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
-export async function loader({ params }: DataFunctionArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
 	// Below error will be caught by error boundary
 	// throw new Error('Loader error')
 

@@ -14,8 +14,8 @@ import {
 	json,
 	unstable_parseMultipartFormData as parseMultipartFormData,
 	redirect,
-	type DataFunctionArgs,
 	type SerializeFrom,
+	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { Form, useFetcher } from '@remix-run/react'
 import { useRef, useState } from 'react'
@@ -73,7 +73,7 @@ const NoteEditorSchema = z.object({
 	images: z.array(ImageFieldsetSchema).max(5).optional(),
 })
 
-export async function action({ request, params }: DataFunctionArgs) {
+export async function action({ request, params }: ActionFunctionArgs) {
 	// require the user and check that the user.username is equal to params.username.
 	// If not, then throw a 403 response
 	// you can use invariantResponse for this.

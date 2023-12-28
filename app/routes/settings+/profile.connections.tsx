@@ -1,7 +1,8 @@
 import {
 	json,
-	type DataFunctionArgs,
 	type SerializeFrom,
+	type LoaderFunctionArgs,
+	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { Form, useFetcher, useLoaderData } from '@remix-run/react'
 import { useState } from 'react'
@@ -38,7 +39,7 @@ async function userCanDeleteConnections(userId: string) {
 	return Boolean(user?._count.connections && user?._count.connections > 1)
 }
 
-export async function loader({ request }: DataFunctionArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
 	const rawConnections = await prisma.connection.findMany({
 		select: { id: true, providerName: true, providerId: true, createdAt: true },
@@ -78,7 +79,7 @@ export async function loader({ request }: DataFunctionArgs) {
 	})
 }
 
-export async function action({ request }: DataFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
 	const userId = await requireUserId(request)
 	const formData = await request.formData()
 	invariantResponse(

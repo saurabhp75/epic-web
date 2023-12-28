@@ -1,4 +1,4 @@
-import { type DataFunctionArgs, redirect } from '@remix-run/node'
+import { type ActionFunctionArgs, redirect } from '@remix-run/node'
 import { logout } from '#app/utils/auth.server'
 
 export async function loader() {
@@ -8,6 +8,6 @@ export async function loader() {
 	return redirect('/')
 }
 
-export async function action({ request }: DataFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
 	throw await logout({ request })
 }

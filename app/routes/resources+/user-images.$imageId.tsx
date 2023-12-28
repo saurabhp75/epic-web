@@ -1,8 +1,8 @@
-import { type DataFunctionArgs } from '@remix-run/node'
+import { type LoaderFunctionArgs } from '@remix-run/node'
 import { prisma } from '#app/utils/db.server'
 import { invariantResponse } from '#app/utils/misc'
 
-export async function loader({ params }: DataFunctionArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
 	invariantResponse(params.imageId, 'Invalid image ID')
 	const image = await prisma.userImage.findUnique({
 		where: { id: params.imageId },

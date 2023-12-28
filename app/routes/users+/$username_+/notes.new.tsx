@@ -1,10 +1,10 @@
 import { requireUser } from '#app/utils/auth.server'
 import { invariantResponse } from '#app/utils/misc'
-import { type DataFunctionArgs } from '@remix-run/node'
+import { type LoaderFunctionArgs } from '@remix-run/node'
 import { json } from '@remix-run/node'
 import { action, NoteEditor } from './__note-editor'
 
-export async function loader({ request, params }: DataFunctionArgs) {
+export async function loader({ request, params }: LoaderFunctionArgs) {
 	const user = await requireUser(request)
 	invariantResponse(user.username === params.username, 'Not authorized', {
 		status: 403,

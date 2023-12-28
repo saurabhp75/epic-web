@@ -2,9 +2,10 @@ import { conform, useForm } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
 import {
 	json,
-	type DataFunctionArgs,
+	type ActionFunctionArgs,
 	type MetaFunction,
 	redirect,
+	type LoaderFunctionArgs,
 } from '@remix-run/node'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
 import { z } from 'zod'
@@ -84,12 +85,12 @@ async function requireResetPasswordUsername(request: Request) {
 	return resetPasswordUsername
 }
 
-export async function loader({ request }: DataFunctionArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
 	const resetPasswordUsername = await requireResetPasswordUsername(request)
 	return json({ resetPasswordUsername })
 }
 
-export async function action({ request }: DataFunctionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
 	const resetPasswordUsername = await requireResetPasswordUsername(request)
 	const formData = await request.formData()
 	const submission = parse(formData, {
