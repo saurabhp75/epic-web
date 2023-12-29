@@ -2,9 +2,10 @@
 // create a full path to that file with path.join(process.cwd(), databaseFile)
 // set process.env.DATABASE_URL to that full path
 import path from 'node:path'
-import { execaCommand } from 'execa'
+// import { execaCommand } from 'execa'
 import fsExtra from 'fs-extra'
 import { afterAll, afterEach, beforeAll } from 'vitest'
+import { BASE_DATABASE_PATH } from './global-setup.ts'
 
 // before all the tests run, use execaCommand from 'execa' to run:
 // prisma migrate reset --force --skip-seed --skip-generate
@@ -19,10 +20,8 @@ process.env.DATABASE_URL = `file:${databasePath}`
 // we dynamically import prisma so it's not loaded before the environment
 // variable is set: await import('#app/utils/db.server.ts')
 beforeAll(async () => {
-	await execaCommand(
-		'prisma migrate reset --force --skip-seed --skip-generate',
-		{ stdio: 'inherit' },
-	)
+	// use fsExtra.copyFile to copy the BASE_DATABASE_PATH to the databasePath
+	await fsExtra.copyFile(BASE_DATABASE_PATH, databasePath)
 })
 
 // after all the tests are finished, dynamically import prisma again and
