@@ -18,6 +18,7 @@ import { getSessionExpirationDate, sessionKey } from '#app/utils/auth.server.ts'
 import { GITHUB_PROVIDER_NAME } from '#app/utils/connections.tsx'
 import { generateTOTP } from '@epic-web/totp'
 import { twoFAVerificationType } from '../settings+/profile.two-factor.tsx'
+import { sessionStorage } from '#app/utils/session.server.ts'
 
 const ROUTE_PATH = '/auth/github/callback'
 const PARAMS = { provider: 'github' }
@@ -90,18 +91,7 @@ test('when auth fails, send the user to login with a toast', async () => {
 test('when a user is logged in, it creates the connection', async () => {
 	// create a new github user with insertGitHubUser from '#tests/mocks/github.ts'
 	const githubUser = await insertGitHubUser()
-
-	// create a new user (use our insertNewUser util from '#tests/db-utils.ts')
-	const newUser = await insertNewUser()
-
-	// create a new session that's connected to that user
-	const session = await prisma.session.create({
-		select: { id: true },
-		data: {
-			expirationDate: getSessionExpirationDate(),
-			user: { connect: newUser },
-		},
-	})
+	const session = await setupUser()
 
 	// pass the session.id and githubUser.code to the setupRequest function
 	// then go below to handle that
@@ -109,7 +99,9 @@ test('when a user is logged in, it creates the connection', async () => {
 		sessionId: session.id,
 		code: githubUser.code,
 	})
+
 	const response = await loader({ request, params: PARAMS, context: {} })
+
 	assertRedirect(response, '/settings/profile/connections')
 	assertToastSent(response)
 
@@ -119,7 +111,7 @@ test('when a user is logged in, it creates the connection', async () => {
 	const connection = await prisma.connection.findFirst({
 		select: { id: true },
 		where: {
-			userId: newUser.id,
+			userId: session.userId,
 			providerId: githubUser.profile.id.toString(),
 		},
 	})
@@ -219,6 +211,7 @@ test('if a user is not logged in, but the connection exists, make a session', as
 test('if a user is not logged in, but the connection exists and they have enabled 2FA, send them to verify their 2FA and do not make a session', async () => {
 	const githubUser = await insertGitHubUser()
 	const { userId } = await setupUser()
+
 	await prisma.connection.create({
 		data: {
 			providerName: GITHUB_PROVIDER_NAME,
@@ -226,6 +219,7 @@ test('if a user is not logged in, but the connection exists and they have enable
 			userId,
 		},
 	})
+
 	const { otp: _otp, ...config } = generateTOTP()
 	await prisma.verification.create({
 		data: {
@@ -234,12 +228,14 @@ test('if a user is not logged in, but the connection exists and they have enable
 			...config,
 		},
 	})
+
 	const request = await setupRequest({ code: githubUser.code })
 	const response = await loader({ request, params: PARAMS, context: {} })
 	const searchParams = new URLSearchParams({
 		type: twoFAVerificationType,
 		target: userId,
 	})
+
 	assertRedirect(response, `/verify?${searchParams}`)
 })
 
@@ -301,9 +297,8 @@ async function setupRequest({
 	// tip: new URL('/some/path', 'https://example.com').toString() === 'https://example.com/some/path'
 	const url = new URL(ROUTE_PATH, BASE_URL)
 
-	// create the state and code  faker.string.uuid() should work fine)
+	// create the state faker.string.uuid() should work fine
 	const state = faker.string.uuid()
-	// const code = faker.string.uuid()
 
 	// set the url.searchParams for `state` and `code`
 	url.searchParams.set('state', state)
@@ -316,7 +311,6 @@ async function setupRequest({
 	connectionSession.set('oauth2:state', state)
 
 	// get the cookieSession from sessionStorage (#app/utils/sessions.server.ts)
-
 	// if there is a sessionId, then set it into the cookieSession under the
 	// sessionKey property
 	const cookieSession = await sessionStorage.getSession()

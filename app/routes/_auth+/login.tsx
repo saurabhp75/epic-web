@@ -27,7 +27,7 @@ import { verifySessionStorage } from '#app/utils/verification.server'
 import { prisma } from '#app/utils/db.server'
 import { redirectWithToast } from '#app/utils/toast.server'
 import { twoFAVerificationType } from '../settings+/profile.two-factor'
-import { generateTOTP } from '@epic-web/totp'
+// import { generateTOTP } from '@epic-web/totp'
 import * as E from '@react-email/components'
 import { ProviderConnectionForm } from '#app/utils/connections'
 
@@ -58,15 +58,16 @@ export async function handleNewSession(
 		verifySession.set(rememberKey, remember)
 
 		// get verification details from db
-		// get otp from verification details and log it (remove it in)
-		const twoFactorVerification = await prisma.verification.findUnique({
-			select: { secret: true, algorithm: true, digits: true, period: true },
-			where: {
-				target_type: { type: twoFAVerificationType, target: session.userId },
-			},
-		})
-		const { otp } = generateTOTP({ ...twoFactorVerification })
-		console.log({ otp })
+		// get otp from verification details and log it (remove it in prod)
+		// const twoFactorVerification = await prisma.verification.findUnique({
+		// 	select: { secret: true, algorithm: true, digits: true, period: true },
+		// 	where: {
+		// 		target_type: { type: twoFAVerificationType, target: session.userId },
+		// 	},
+		// })
+		// Send otp to the user
+		// const { otp } = generateTOTP({ ...twoFactorVerification })
+		// console.log({ otp })
 
 		const redirectUrl = getRedirectToUrl({
 			request,
@@ -74,7 +75,8 @@ export async function handleNewSession(
 			target: session.userId,
 		})
 		return redirect(
-			redirectUrl.toString(),
+			// redirectUrl.toString(),
+			`${redirectUrl.pathname}?${redirectUrl.searchParams}`,
 			combineResponseInits(
 				{
 					headers: {

@@ -3,11 +3,11 @@
  * for the purposes of our workshop. The data modeling workshop will cover
  * the proper database.
  */
-import crypto from 'node:crypto'
-import fs from 'node:fs/promises'
-import os from 'node:os'
-import path from 'node:path'
-import { factory, manyOf, nullable, oneOf, primaryKey } from '@mswjs/data'
+// import crypto from 'node:crypto'
+// import fs from 'node:fs/promises'
+// import os from 'node:os'
+// import path from 'node:path'
+// import { factory, manyOf, nullable, oneOf, primaryKey } from '@mswjs/data'
 import { singleton } from './singleton.server'
 import { PrismaClient } from '@prisma/client'
 import chalk from 'chalk'
@@ -36,7 +36,7 @@ const prisma = singleton('prisma', () => {
 		log: [
 			{ level: 'query', emit: 'event' },
 			{ level: 'error', emit: 'stdout' },
-			{ level: 'info', emit: 'stdout' },
+			// { level: 'info', emit: 'stdout' },
 			{ level: 'warn', emit: 'stdout' },
 		],
 	})
@@ -46,12 +46,12 @@ const prisma = singleton('prisma', () => {
 			e.duration < logThreshold * 1.1
 				? 'green'
 				: e.duration < logThreshold * 1.2
-				  ? 'blue'
-				  : e.duration < logThreshold * 1.3
-				    ? 'yellow'
-				    : e.duration < logThreshold * 1.4
-				      ? 'redBright'
-				      : 'red'
+					? 'blue'
+					: e.duration < logThreshold * 1.3
+						? 'yellow'
+						: e.duration < logThreshold * 1.4
+							? 'redBright'
+							: 'red'
 		const dur = chalk[color](`${e.duration}ms`)
 		console.info(`prisma:query - ${dur} - ${e.query}`)
 	})
@@ -66,6 +66,7 @@ const prisma = singleton('prisma', () => {
 export { prisma }
 
 // We'll keep this stuff round until we've migrated everything over
+/*
 const getId = () => crypto.randomBytes(16).toString('hex').slice(0, 8)
 
 export const db = singleton('db', () => {
@@ -261,3 +262,4 @@ async function writeImage(image: File) {
 	await fs.writeFile(filepath, Buffer.from(await image.arrayBuffer()))
 	return filepath
 }
+*/

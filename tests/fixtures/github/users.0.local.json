@@ -3,25 +3,25 @@
     "code": "MOCK_GITHUB_CODE_KODY",
     "accessToken": "MOCK_GITHUB_CODE_KODY_mock_access_token",
     "profile": {
-      "login": "Frederique.Moen77",
+      "login": "Maia29",
       "id": "MOCK_GITHUB_CODE_KODY_profile_id",
-      "name": "Alfred Thiel",
+      "name": "Jesse Satterfield",
       "avatar_url": "https://github.com/ghost.png",
       "emails": [
-        "Nola33@hotmail.com",
-        "Liam_Bahringer@hotmail.com",
+        "Lorena.Rempel@hotmail.com",
+        "Giovanni78@gmail.com",
         "kody@kcd.dev"
       ]
     },
     "emails": [
       {
-        "email": "Nola33@hotmail.com",
+        "email": "Lorena.Rempel@hotmail.com",
         "verified": false,
         "primary": false,
         "visibility": "public"
       },
       {
-        "email": "Liam_Bahringer@hotmail.com",
+        "email": "Giovanni78@gmail.com",
         "verified": true,
         "primary": false,
         "visibility": null
@@ -30,7 +30,7 @@
         "email": "kody@kcd.dev",
         "verified": true,
         "primary": true,
-        "visibility": null
+        "visibility": "public"
       }
     ],
     "primaryEmail": "kody@kcd.dev"
