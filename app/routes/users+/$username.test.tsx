@@ -10,7 +10,6 @@ import { loader as rootLoader } from '#app/root'
 import { default as UsernameRoute, loader } from './$username.tsx'
 import { getUserImages, insertNewUser } from '#tests/db-utils.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { invariant } from '#app/utils/misc.tsx'
 import { getSessionExpirationDate, sessionKey } from '#app/utils/auth.server.ts'
 import setCookieParser from 'set-cookie-parser'
 import { sessionStorage } from '#app/utils/session.server.ts'
@@ -52,8 +51,6 @@ test('The user profile when not logged in as self', async () => {
 			</AuthenticityTokenProvider>
 		),
 	})
-
-	invariant(user.name, 'User name should be defined')
 
 	// you'll notice we're using findBy queries here which are async. We really
 	// only need it for the first one, because we need to wait for Remix to update

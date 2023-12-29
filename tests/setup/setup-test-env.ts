@@ -5,6 +5,7 @@ import { installGlobals } from '@remix-run/node'
 import { beforeEach, vi, type SpyInstance, afterEach } from 'vitest'
 import { server } from '../mocks/index.ts'
 import { cleanup } from '@testing-library/react'
+import './custom-matchers.ts'
 
 installGlobals()
 
