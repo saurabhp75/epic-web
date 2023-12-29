@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './db-setup.ts'
 import '#app/utils/env.server.ts'
 import '@testing-library/jest-dom/vitest'
 import { installGlobals } from '@remix-run/node'

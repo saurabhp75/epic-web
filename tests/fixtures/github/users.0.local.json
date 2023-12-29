@@ -3,25 +3,25 @@
     "code": "MOCK_GITHUB_CODE_KODY",
     "accessToken": "MOCK_GITHUB_CODE_KODY_mock_access_token",
     "profile": {
-      "login": "Maia29",
+      "login": "Gabriel47",
       "id": "MOCK_GITHUB_CODE_KODY_profile_id",
-      "name": "Jesse Satterfield",
+      "name": "Bridget Will",
       "avatar_url": "https://github.com/ghost.png",
       "emails": [
-        "Lorena.Rempel@hotmail.com",
-        "Giovanni78@gmail.com",
+        "Myriam.Hauck41@yahoo.com",
+        "Carmel.Dicki@yahoo.com",
         "kody@kcd.dev"
       ]
     },
     "emails": [
       {
-        "email": "Lorena.Rempel@hotmail.com",
+        "email": "Myriam.Hauck41@yahoo.com",
         "verified": false,
         "primary": false,
         "visibility": "public"
       },
       {
-        "email": "Giovanni78@gmail.com",
+        "email": "Carmel.Dicki@yahoo.com",
         "verified": true,
         "primary": false,
         "visibility": null

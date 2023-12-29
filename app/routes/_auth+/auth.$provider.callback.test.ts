@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 import { http } from 'msw'
 // import the mock server from the mocks folder
-// because it starts the server for us automatically, you don't have to worry
+// because it starts the server automatically, you don't have to worry
 // about starting it, and it also handles stopping automatically as well.
 // import '#tests/mocks/index.ts'
 import { server } from '#tests/mocks/index'
@@ -12,7 +12,7 @@ import { loader } from './auth.$provider.callback.ts'
 import { invariant } from '#app/utils/misc.tsx'
 import { deleteGitHubUsers, insertGitHubUser } from '#tests/mocks/github.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { createUser, insertNewUser } from '#tests/db-utils.ts'
+import { createUser } from '#tests/db-utils.ts'
 import { getSessionExpirationDate, sessionKey } from '#app/utils/auth.server.ts'
 import { GITHUB_PROVIDER_NAME } from '#app/utils/connections.tsx'
 import { generateTOTP } from '@epic-web/totp'
@@ -309,12 +309,11 @@ async function setupRequest({
 async function setupUser(userData = createUser()) {
 	// Because our database is completely reset beetween tests, you can skip the
 	// insertNewUser and do a nested create now!
-	const user = await insertNewUser(userData)
 	const session = await prisma.session.create({
 		data: {
 			expirationDate: getSessionExpirationDate(),
 			// use a nested create instead:
-			userId: user.id,
+			user: { create: userData },
 		},
 		select: {
 			id: true,
