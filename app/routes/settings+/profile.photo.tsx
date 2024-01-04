@@ -8,10 +8,14 @@ import {
 	type ActionFunctionArgs,
 	type LoaderFunctionArgs,
 } from '@remix-run/node'
-import { Form, useActionData, useLoaderData } from '@remix-run/react'
+import {
+	Form,
+	useActionData,
+	useLoaderData,
+	useNavigation,
+} from '@remix-run/react'
 import { useState } from 'react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
-import { ServerOnly } from 'remix-utils/server-only'
 import { z } from 'zod'
 import { ErrorList } from '#app/components/forms'
 import { Button } from '#app/components/ui/button'
@@ -26,7 +30,6 @@ import {
 	useIsPending,
 } from '#app/utils/misc'
 import { requireUserId } from '#app/utils/auth.server'
-// import { request } from 'express'
 
 export const handle = {
 	breadcrumb: <Icon name="avatar">Photo</Icon>,
@@ -34,12 +37,19 @@ export const handle = {
 
 const MAX_SIZE = 1024 * 1024 * 3 // 3MB
 
-const PhotoFormSchema = z.object({
+const DeleteImageSchema = z.object({
+	intent: z.literal('delete'),
+})
+
+const NewImageSchema = z.object({
+	intent: z.literal('submit'),
 	photoFile: z
 		.instanceof(File)
 		.refine(file => file.size > 0, 'Image is required')
 		.refine(file => file.size <= MAX_SIZE, 'Image size must be less than 3MB'),
 })
+
+const PhotoFormSchema = z.union([DeleteImageSchema, NewImageSchema])
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
@@ -62,19 +72,14 @@ export async function action({ request }: ActionFunctionArgs) {
 		request,
 		unstable_createMemoryUploadHandler({ maxPartSize: MAX_SIZE }),
 	)
-
 	await validateCSRF(formData, request.headers)
-
-	const intent = formData.get('intent')
-	if (intent === 'delete') {
-		await prisma.userImage.deleteMany({ where: { userId } })
-		return redirect('/settings/profile')
-	}
 
 	const submission = await parse(formData, {
 		schema: PhotoFormSchema.transform(async data => {
+			if (data.intent === 'delete') return { intent: 'delete' }
 			if (data.photoFile.size <= 0) return z.NEVER
 			return {
+				intent: data.intent,
 				image: {
 					contentType: data.photoFile.type,
 					blob: Buffer.from(await data.photoFile.arrayBuffer()),
@@ -91,8 +96,12 @@ export async function action({ request }: ActionFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { image } = submission.value
+	const { image, intent } = submission.value
 
+	if (intent === 'delete') {
+		await prisma.userImage.deleteMany({ where: { userId } })
+		return redirect('/settings/profile')
+	}
 	await prisma.$transaction(async $prisma => {
 		await $prisma.userImage.deleteMany({ where: { userId } })
 		await $prisma.user.update({
@@ -110,18 +119,25 @@ export default function PhotoRoute() {
 	const doubleCheckDeleteImage = useDoubleCheck()
 
 	const actionData = useActionData<typeof action>()
+	const navigation = useNavigation()
 
 	const [form, fields] = useForm({
 		id: 'profile-photo',
 		constraint: getFieldsetConstraint(PhotoFormSchema),
 		lastSubmission: actionData?.submission,
 		onValidate({ formData }) {
-			return parse(formData, { schema: PhotoFormSchema })
+			// otherwise, best error zod give is "Invalid input" which is not enough
+			if (formData.get('intent') === 'delete') {
+				return parse(formData, { schema: DeleteImageSchema })
+			}
+			return parse(formData, { schema: NewImageSchema })
 		},
 		shouldRevalidate: 'onBlur',
 	})
 
 	const isPending = useIsPending()
+	const pendingIntent = isPending ? navigation.formData?.get('intent') : null
+	const lastSubmissionIntent = actionData?.submission.value?.intent
 
 	const [newImageSrc, setNewImageSrc] = useState<string | null>(null)
 
@@ -143,71 +159,85 @@ export default function PhotoRoute() {
 					alt={data.user?.name ?? data.user?.username}
 				/>
 				<ErrorList errors={fields.photoFile.errors} id={fields.photoFile.id} />
-				<input
-					{...conform.input(fields.photoFile, { type: 'file' })}
-					accept="image/*"
-					className="peer sr-only"
-					tabIndex={newImageSrc ? -1 : 0}
-					onChange={e => {
-						const file = e.currentTarget.files?.[0]
-						if (file) {
-							const reader = new FileReader()
-							reader.onload = event => {
-								setNewImageSrc(event.target?.result?.toString() ?? null)
+				<div className="flex gap-4">
+					{/*
+						We're doing some kinda odd things to make it so this works well
+						without JavaScript. Basically, we're using CSS to ensure the right
+						buttons show up based on the input's "valid" state (whether or not
+						an image has been selected). Progressive enhancement FTW!
+					*/}
+					<input
+						{...conform.input(fields.photoFile, { type: 'file' })}
+						accept="image/*"
+						className="peer sr-only"
+						required
+						tabIndex={newImageSrc ? -1 : 0}
+						onChange={e => {
+							const file = e.currentTarget.files?.[0]
+							if (file) {
+								const reader = new FileReader()
+								reader.onload = event => {
+									setNewImageSrc(event.target?.result?.toString() ?? null)
+								}
+								reader.readAsDataURL(file)
 							}
-							reader.readAsDataURL(file)
+						}}
+					/>
+					<Button
+						asChild
+						className="cursor-pointer peer-valid:hidden peer-focus-within:ring-4 peer-focus-visible:ring-4"
+					>
+						<label htmlFor={fields.photoFile.id}>
+							<Icon name="pencil-1">Change</Icon>
+						</label>
+					</Button>
+					<StatusButton
+						name="intent"
+						value="submit"
+						type="submit"
+						className="peer-invalid:hidden"
+						status={
+							pendingIntent === 'submit'
+								? 'pending'
+								: lastSubmissionIntent === 'submit'
+									? actionData?.status ?? 'idle'
+									: 'idle'
 						}
-					}}
-				/>
-				{newImageSrc ? (
-					<div className="flex gap-4">
+					>
+						Save Photo
+					</StatusButton>
+					<Button
+						type="reset"
+						variant="destructive"
+						className="peer-invalid:hidden"
+					>
+						<Icon name="trash">Reset</Icon>
+					</Button>
+					{data.user.image?.id ? (
 						<StatusButton
-							type="submit"
-							status={isPending ? 'pending' : actionData?.status ?? 'idle'}
-							disabled={isPending}
+							className="peer-valid:hidden"
+							variant="destructive"
+							{...doubleCheckDeleteImage.getButtonProps({
+								type: 'submit',
+								name: 'intent',
+								value: 'delete',
+							})}
+							status={
+								pendingIntent === 'delete'
+									? 'pending'
+									: lastSubmissionIntent === 'delete'
+										? actionData?.status ?? 'idle'
+										: 'idle'
+							}
 						>
-							Save Photo
+							<Icon name="trash">
+								{doubleCheckDeleteImage.doubleCheck
+									? 'Are you sure?'
+									: 'Delete'}
+							</Icon>
 						</StatusButton>
-						<Button type="reset" variant="secondary">
-							Reset
-						</Button>
-					</div>
-				) : (
-					<div className="flex gap-4 peer-invalid:[&>.server-only[type='submit']]:hidden">
-						<Button asChild className="cursor-pointer">
-							<label htmlFor={fields.photoFile.id}>
-								<Icon name="pencil-1">Change</Icon>
-							</label>
-						</Button>
-
-						{/* This is here for progressive enhancement. If the client doesn't
-						hydrate (or hasn't yet) this button will be available to submit the
-						selected photo. */}
-						<ServerOnly>
-							{() => (
-								<Button type="submit" className="server-only">
-									Save Photo
-								</Button>
-							)}
-						</ServerOnly>
-						{data.user.image?.id ? (
-							<Button
-								variant="destructive"
-								{...doubleCheckDeleteImage.getButtonProps({
-									type: 'submit',
-									name: 'intent',
-									value: 'delete',
-								})}
-							>
-								<Icon name="trash">
-									{doubleCheckDeleteImage.doubleCheck
-										? 'Are you sure?'
-										: 'Delete'}
-								</Icon>
-							</Button>
-						) : null}
-					</div>
-				)}
+					) : null}
+				</div>
 				<ErrorList errors={form.errors} />
 			</Form>
 		</div>
