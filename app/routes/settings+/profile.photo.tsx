@@ -30,9 +30,12 @@ import {
 	useIsPending,
 } from '#app/utils/misc'
 import { requireUserId } from '#app/utils/auth.server'
+import { type BreadcrumbHandle } from './profile'
+import { type SEOHandle } from '@nasa-gcn/remix-seo'
 
-export const handle = {
+export const handle: BreadcrumbHandle & SEOHandle = {
 	breadcrumb: <Icon name="avatar">Photo</Icon>,
+	getSitemapEntries: () => null,
 }
 
 const MAX_SIZE = 1024 * 1024 * 3 // 3MB

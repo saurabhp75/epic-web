@@ -26,12 +26,14 @@ import { EmailSchema } from '#app/utils/user-validation'
 import { verifySessionStorage } from '#app/utils/verification.server'
 import { redirectWithToast } from '#app/utils/toast.server'
 import { requireRecentVerification } from './profile.two-factor.disable'
+import { type BreadcrumbHandle } from './profile'
+import { type SEOHandle } from '@nasa-gcn/remix-seo'
 
-export const handle = {
+export const handle: BreadcrumbHandle & SEOHandle = {
 	breadcrumb: <Icon name="envelope-closed">Change Email</Icon>,
+	getSitemapEntries: () => null,
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- we'll use this below
 const newEmailAddressSessionKey = 'new-email-address'
 
 export async function handleVerification({

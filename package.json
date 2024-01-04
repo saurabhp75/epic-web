@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "remix build",
+    "build:icons": "tsx ./other/build-icons.ts",
+    "build:remix": "remix build --sourcemap",
+    "build:server": "tsx ./other/build-server.ts",
     "dev": "remix dev -c \"node ./server/dev-server.js\" --manual",
     "debug": "NODE_OPTIONS=\"--inspect\" remix dev -c \"node ./server/dev-server.js\" --manual",
     "start": "remix-serve ./build/index.js",
@@ -27,6 +30,7 @@
     "@conform-to/zod": "^0.9.1",
     "@epic-web/totp": "^1.1.1",
     "@mswjs/data": "^0.16.1",
+    "@nasa-gcn/remix-seo": "^2.0.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "@prisma/client": "^5.6.0",
     "@radix-ui/react-alert-dialog": "^1.0.5",

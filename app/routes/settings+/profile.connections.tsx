@@ -20,10 +20,14 @@ import { ProviderNameSchema } from '#app/utils/connections'
 import { prisma } from '#app/utils/db.server'
 import { invariantResponse, useIsPending } from '#app/utils/misc'
 import { createToastHeaders } from '#app/utils/toast.server'
+import { type BreadcrumbHandle } from './profile'
+import { type SEOHandle } from '@nasa-gcn/remix-seo'
 
-export const handle = {
+export const handle: BreadcrumbHandle & SEOHandle = {
 	breadcrumb: <Icon name="link-2">Connections</Icon>,
+	getSitemapEntries: () => null,
 }
+
 
 async function userCanDeleteConnections(userId: string) {
 	const user = await prisma.user.findUnique({

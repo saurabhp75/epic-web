@@ -16,9 +16,12 @@ import { getPasswordHash, requireUserId } from '#app/utils/auth.server'
 import { prisma } from '#app/utils/db.server'
 import { useIsPending } from '#app/utils/misc'
 import { PasswordSchema } from '#app/utils/user-validation'
+import { type BreadcrumbHandle } from './profile'
+import { type SEOHandle } from '@nasa-gcn/remix-seo'
 
-export const handle = {
+export const handle: BreadcrumbHandle & SEOHandle = {
 	breadcrumb: <Icon name="dots-horizontal">Password</Icon>,
+	getSitemapEntries: () => null,
 }
 
 const CreatePasswordForm = z

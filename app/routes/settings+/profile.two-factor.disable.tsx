@@ -15,9 +15,12 @@ import { prisma } from '#app/utils/db.server'
 import { twoFAVerificationType } from './profile.two-factor'
 import { getRedirectToUrl } from '../_auth+/verify'
 import { shouldRequestTwoFA } from '../_auth+/login'
+import { type BreadcrumbHandle } from './profile'
+import { type SEOHandle } from '@nasa-gcn/remix-seo'
 
-export const handle = {
+export const handle: BreadcrumbHandle & SEOHandle = {
 	breadcrumb: <Icon name="lock-open-1">Disable</Icon>,
+	getSitemapEntries: () => null,
 }
 
 export async function requireRecentVerification({

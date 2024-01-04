@@ -26,9 +26,12 @@ import { redirectWithToast } from '#app/utils/toast.server'
 import { getTOTPAuthUri } from '@epic-web/totp'
 import { isCodeValid } from '../_auth+/verify'
 import { twoFAVerificationType } from './profile.two-factor'
+import { type BreadcrumbHandle } from './profile'
+import { type SEOHandle } from '@nasa-gcn/remix-seo'
 
-export const handle = {
+export const handle: BreadcrumbHandle & SEOHandle = {
 	breadcrumb: <Icon name="check">Verify</Icon>,
+	getSitemapEntries: () => null,
 }
 
 const VerifySchema = z.object({
