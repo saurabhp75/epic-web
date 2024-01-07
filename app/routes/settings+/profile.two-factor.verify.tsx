@@ -15,7 +15,7 @@ import {
 import * as QRCode from 'qrcode'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { z } from 'zod'
-import { Field } from '#app/components/forms'
+import { ErrorList, Field } from '#app/components/forms'
 import { Icon } from '#app/components/ui/icon'
 import { StatusButton } from '#app/components/ui/status-button'
 import { requireUserId } from '#app/utils/auth.server'
@@ -34,9 +34,13 @@ export const handle: BreadcrumbHandle & SEOHandle = {
 	getSitemapEntries: () => null,
 }
 
+const CancelSchema = z.object({ intent: z.literal('cancel') })
 const VerifySchema = z.object({
+	intent: z.literal('verify'),
 	code: z.string().min(6).max(6),
 })
+
+const ActionSchema = z.union([CancelSchema, VerifySchema])
 
 export const twoFAVerifyVerificationType = '2fa-verify'
 
@@ -92,7 +96,8 @@ export async function action({ request }: ActionFunctionArgs) {
 	}
 	const submission = await parse(formData, {
 		schema: () =>
-			VerifySchema.superRefine(async (data, ctx) => {
+			ActionSchema.superRefine(async (data, ctx) => {
+				if (data.intent === 'cancel') return null
 				// determine whether the code is valid using the isCodeValid util from
 				// '#app/routes/_auth+/verify.tsx'
 				const codeIsValid = await isCodeValid({
@@ -120,21 +125,30 @@ export async function action({ request }: ActionFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	// update the verification from the twoFAVerifyVerifycationType to the twoFAVerificationType
-	// set the expiresAt to null! This should never expire.
-	await prisma.verification.update({
-		where: {
-			target_type: { type: twoFAVerifyVerificationType, target: userId },
-		},
-		data: { type: twoFAVerificationType, expiresAt: null },
-	})
-
-	// we'll need to update the verification type here...
-	throw await redirectWithToast('/settings/profile/two-factor', {
-		type: 'success',
-		title: 'Enabled',
-		description: 'Two-factor authentication has been enabled.',
-	})
+	switch (submission.value.intent) {
+		case 'cancel': {
+			await prisma.verification.deleteMany({
+				where: { type: twoFAVerifyVerificationType, target: userId },
+			})
+			return redirect('/settings/profile/two-factor')
+		}
+		case 'verify': {
+			// update the verification from the twoFAVerifyVerifycationType to the twoFAVerificationType
+			// set the expiresAt to null! This should never expire.
+			await prisma.verification.update({
+				where: {
+					target_type: { type: twoFAVerifyVerificationType, target: userId },
+				},
+				data: { type: twoFAVerificationType },
+			})
+			// we'll need to update the verification type here...
+			return redirectWithToast('/settings/profile/two-factor', {
+				type: 'success',
+				title: 'Enabled',
+				description: 'Two-factor authentication has been enabled.',
+			})
+		}
+	}
 }
 
 export default function TwoFactorRoute() {
@@ -144,12 +158,18 @@ export default function TwoFactorRoute() {
 
 	const isPending = useIsPending()
 	const pendingIntent = isPending ? navigation.formData?.get('intent') : null
+	const lastSubmissionIntent = actionData?.submission.value?.intent
 
 	const [form, fields] = useForm({
 		id: 'verify-form',
 		constraint: getFieldsetConstraint(VerifySchema),
 		lastSubmission: actionData?.submission,
 		onValidate({ formData }) {
+			// otherwise, the best error zod gives us is "Invalid input" which is not
+			// enough
+			if (formData.get('intent') === 'cancel') {
+				return parse(formData, { schema: CancelSchema })
+			}
 			return parse(formData, { schema: VerifySchema })
 		},
 	})
@@ -186,9 +206,16 @@ export default function TwoFactorRoute() {
 								htmlFor: fields.code.id,
 								children: 'Code',
 							}}
-							inputProps={{ ...conform.input(fields.code), autoFocus: true }}
+							inputProps={{
+								...conform.input(fields.code),
+								autoFocus: true,
+								autoComplete: 'one-time-code',
+							}}
 							errors={fields.code.errors}
 						/>
+						<div className="min-h-[32px] px-4 pb-3 pt-1">
+							<ErrorList id={form.errorId} errors={form.errors} />
+						</div>
 						<div className="flex justify-between gap-4">
 							<StatusButton
 								className="w-full"
@@ -207,7 +234,13 @@ export default function TwoFactorRoute() {
 							<StatusButton
 								className="w-full"
 								variant="secondary"
-								status={pendingIntent === 'cancel' ? 'pending' : 'idle'}
+								status={
+									pendingIntent === 'cancel'
+										? 'pending'
+										: lastSubmissionIntent === 'cancel'
+											? actionData?.status ?? 'idle'
+											: 'idle'
+								}
 								type="submit"
 								name="intent"
 								value="cancel"
