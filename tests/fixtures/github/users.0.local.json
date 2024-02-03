@@ -3,25 +3,25 @@
     "code": "MOCK_GITHUB_CODE_KODY",
     "accessToken": "MOCK_GITHUB_CODE_KODY_mock_access_token",
     "profile": {
-      "login": "Gabriel47",
+      "login": "Esta.Stehr2",
       "id": "MOCK_GITHUB_CODE_KODY_profile_id",
-      "name": "Bridget Will",
+      "name": "Clint Kuphal",
       "avatar_url": "https://github.com/ghost.png",
       "emails": [
-        "Myriam.Hauck41@yahoo.com",
-        "Carmel.Dicki@yahoo.com",
+        "Winifred62@gmail.com",
+        "Tiffany_Homenick51@yahoo.com",
         "kody@kcd.dev"
       ]
     },
     "emails": [
       {
-        "email": "Myriam.Hauck41@yahoo.com",
+        "email": "Winifred62@gmail.com",
         "verified": false,
         "primary": false,
         "visibility": "public"
       },
       {
-        "email": "Carmel.Dicki@yahoo.com",
+        "email": "Tiffany_Homenick51@yahoo.com",
         "verified": true,
         "primary": false,
         "visibility": null

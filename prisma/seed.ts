@@ -2,46 +2,10 @@ import fs from 'node:fs'
 import { faker } from '@faker-js/faker'
 import { PrismaClient } from '@prisma/client'
 import { promiseHash } from 'remix-utils/promise'
-import { UniqueEnforcer } from 'enforce-unique'
-import { createPassword } from '#tests/db-utils'
+import { createPassword, createUser } from '#tests/db-utils'
 import { insertGitHubUser } from '#tests/mocks/github'
 
 const prisma = new PrismaClient()
-
-// create a unique username enforcer here
-const uniqueUsernameEnforcer = new UniqueEnforcer()
-
-export function createUser() {
-	const firstName = faker.person.firstName()
-	const lastName = faker.person.lastName()
-
-	// you might add a tiny bit of random alphanumeric characters to the start
-	// of the username to reduce the chance of collisions.
-
-	// transform the username to only be the first 20 characters
-	// you can use .slice(0, 20) for this
-	// turn the username to lowercase
-	// replace any non-alphanumeric characters with an underscore
-	const username = uniqueUsernameEnforcer
-		.enforce(() => {
-			return (
-				faker.string.alphanumeric({ length: 2 }) +
-				'_' +
-				faker.internet.userName({
-					firstName: firstName.toLowerCase(),
-					lastName: lastName.toLowerCase(),
-				})
-			)
-		})
-		.slice(0, 20)
-		.toLowerCase()
-		.replace(/[^a-z0-9_]/g, '_')
-	return {
-		username,
-		name: `${firstName} ${lastName}`,
-		email: `${username}@example.com`,
-	}
-}
 
 async function img({
 	altText,
